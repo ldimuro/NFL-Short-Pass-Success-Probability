@@ -26,12 +26,18 @@ def main():
     print('running main')
     set_seed()
 
-    # tracking_data = data_processing.get_tracking_data(year=2022, week_start=1, week_end=1)
-    # print('TOTAL WEEKS OF TRACKING DATA:', len(tracking_data))
+    is_testing = True
 
-    play_data = data_processing.get_play_data(year=2022, pass_only=True)
-    print(len(play_data))
-    print(play_data.head())
+    passing_play_data, passing_tracking_data = data_processing.get_passing_plays(year=2022, week_start=1, week_end=1)
+
+    print('passing play data:', len(passing_play_data))
+    print('tracking data week #1:', len(passing_tracking_data[0]))
+
+    if is_testing:
+        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022090800]
+
+        frames = data_processing.get_pocket_frames(passing_play_data.iloc[[0]], passing_tracking_data)
+        print(frames)
 
 
 
