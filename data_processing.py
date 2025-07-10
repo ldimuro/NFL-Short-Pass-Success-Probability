@@ -2,15 +2,21 @@ import pandas as pd
 from pandas import DataFrame
 import numpy as np
 
+
+FIELD_LENGTH = 120.0
+FIELD_WIDTH = 53.33
+
+
 def get_passing_plays(year, week_start, week_end):
     print('getting passing plays')
 
-    tracking_data = get_tracking_data(year=year, week_start=week_start, week_end=week_end)
-
+    # Get all passing plays
     passing_play_data = get_play_data(year=year, pass_only=True)
-    print(len(passing_play_data))
-    print(passing_play_data.head())
+    # print(len(passing_play_data))
+    # print(passing_play_data.head())
 
+    # Get tracking data of passing plays
+    tracking_data = get_tracking_data(year=year, week_start=week_start, week_end=week_end)
     filtered_tracking_data = []
     for week_df in tracking_data:
         merged = week_df.merge(passing_play_data[['gameId', 'playId']], on=['gameId', 'playId'], how='inner')
@@ -29,7 +35,7 @@ def get_pocket_frames(play_data: DataFrame, tracking_data):
 
         print(f'searching for {game_id} - {play_id}')
 
-        # Look through all weeks of tracking data
+        # Look through all weeks of tracking data for specific play
         tracking_play = None
         for i,week_df in enumerate(tracking_data):
             match = week_df[(week_df['gameId'] == game_id) & (week_df['playId'] == play_id)]
@@ -84,5 +90,32 @@ def get_play_data(year, pass_only=True):
         data = data[data['passResult'].notna()]
 
     return data
+
+def get_player_data(year):
+    file_path = f'/Volumes/T7/Machine_Learning/Datasets/NFL/misc/players_{year}.csv'
+    data = pd.read_csv(file_path)
+    return data
+
+
+# def create_ol_tensor()
+
+# Input: 11 defenders, Output: defenders that are rushers
+# Method: Defenders that are within 3-4 yards of the LoS that move towards the QB in the first ~1.5 seconds
+def detect_rushers(player_data, tracking_data):
+    defense_rush_positions = ['CB', 'OLB', 'DE', 'DT', 'ILB', 'FS', 'SS', 'NT', 'MLB', 'DB', 'LB']
+    print(tracking_data)
+    print('PROCESSING RUSHERS')
+
+# Input: RBs, TEs, and FBs, Output: players that are blocking
+# Method: players that remain relatively close to their starting coords after ~1.5 seconds, that have a low velocity
+def detect_blockers():
+    offense_block_positions = ['RB', 'FB', 'TE']
+    pass
+
+
+def scale_player_coordinates(player_x, player_y, x_scale=128/FIELD_LENGTH, y_scale=64/FIELD_WIDTH):
+    x_scaled = player_x * x_scale
+    y_scaled = player_y * y_scale
+    return x_scaled, y_scaled
 
     
