@@ -17,6 +17,7 @@ def get_passing_plays(year, week_start, week_end):
 
     # Get tracking data of passing plays
     tracking_data = get_tracking_data(year=year, week_start=week_start, week_end=week_end)
+    #TODO: Normalize the direction of all tracking data
     filtered_tracking_data = []
     for week_df in tracking_data:
         merged = week_df.merge(passing_play_data[['gameId', 'playId']], on=['gameId', 'playId'], how='inner')
@@ -97,14 +98,37 @@ def get_player_data(year):
     return data
 
 
-# def create_ol_tensor()
 
 # Input: 11 defenders, Output: defenders that are rushers
 # Method: Defenders that are within 3-4 yards of the LoS that move towards the QB in the first ~1.5 seconds
-def detect_rushers(player_data, tracking_data):
-    defense_rush_positions = ['CB', 'OLB', 'DE', 'DT', 'ILB', 'FS', 'SS', 'NT', 'MLB', 'DB', 'LB']
-    print(tracking_data)
+def detect_rushers(all_def_players, tracking_data, ball_coord, qb_coord):
     print('PROCESSING RUSHERS')
+
+    ball_x, ball_y = ball_coord
+    qb_x, qb_y = qb_coord
+
+    # Observe difference in defenders positions/velocity from the snap and 1.5 seconds later
+    time_delay = 15 # 1.5 sec * 10 frames/sec
+    start_frame = tracking_data['frameId'].min()
+    end_frame = min(tracking_data['frameId'].max(), start_frame+time_delay)
+    print(f'start:{start_frame}, end:{end_frame}')
+
+    # Filter play tracking data to only include defenders
+    frame_defenders = tracking_data[tracking_data['nflId'].isin(all_def_players)]
+    print(frame_defenders)
+
+    # Get defender tracking data at the ball snap
+    starting_positions = frame_defenders[frame_defenders['frameId'] == start_frame]
+    print('starting_positions:\n', starting_positions)
+
+    # Get defender tracking data 1.5 seconds after ball snap
+    ending_positions = frame_defenders[frame_defenders['frameId'] == end_frame]
+    print('ending_positions:\n', ending_positions)
+
+    los_dist_thresh = 5.0
+    close_to_los = starting_positions[np.abs(starting_positions['x'] - ball_x) <= los_dist_thresh]
+    print('close_to_los:\n', close_to_los)
+
 
 # Input: RBs, TEs, and FBs, Output: players that are blocking
 # Method: players that remain relatively close to their starting coords after ~1.5 seconds, that have a low velocity

@@ -28,29 +28,40 @@ def main():
 
     is_testing = True
 
-    passing_play_data, passing_tracking_data = data_processing.get_passing_plays(year=2022, week_start=1, week_end=1)
+    passing_play_data, passing_tracking_data = data_processing.get_passing_plays(year=2022, week_start=1, week_end=1 if is_testing else 9)
     player_data = data_processing.get_player_data(year=2022)
 
     print('passing play data:', len(passing_play_data))
     print('tracking data week #1:', len(passing_tracking_data[0]))
 
     if is_testing:
-        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022090800]
-        print(passing_play_data.iloc[0])
+        test_play = 724#705
 
-        passing_frames_dict = data_processing.get_pocket_frames(passing_play_data.iloc[[0]], passing_tracking_data) #passing_play_data.iloc[[0]]
+        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200]
+        print(passing_play_data.iloc[test_play])
+
+        passing_frames_dict = data_processing.get_pocket_frames(passing_play_data.iloc[[test_play]], passing_tracking_data) #passing_play_data.iloc[[0]]
         print(passing_frames_dict.keys())
 
-    
-    print(passing_frames_dict[(2022090800, 692)])
-    ball_x, ball_y = passing_frames_dict[(2022090800, 692)].iloc[0][['x', 'y']]
-    print('ball_coords:', ball_x, ball_y)
 
-    
-    
+    defense_rush_positions = ['CB', 'OLB', 'DE', 'DT', 'ILB', 'FS', 'SS', 'NT', 'MLB', 'DB', 'LB']
+    all_def_players = player_data[player_data['position'].isin(defense_rush_positions)]['nflId'].unique()
+    all_qbs = player_data[player_data['position'] == 'QB']['nflId'].unique()
 
     for play,play_frames in passing_frames_dict.items():
-        data_processing.detect_rushers(player_data, play_frames)
+        print(play_frames)
+
+        # Get ball location
+        ball_x, ball_y = play_frames[(play_frames['displayName'] == 'football') & (play_frames['event'] == 'ball_snap')].iloc[0][['x', 'y']] #play_frames.iloc[0][['x', 'y']]
+        print('ball_coords:', ball_x, ball_y)
+
+        # Get QB location
+        qb = play_frames[play_frames['nflId'].isin(all_qbs)].iloc[0]
+        qb_x, qb_y = qb[['x', 'y']]
+        qb_display = qb['displayName']
+        print(qb_display, qb_x, qb_y)
+
+        data_processing.detect_rushers(all_def_players, play_frames, (ball_x, ball_y), (qb_x, qb_y))
 
     # print(player_data)
 
