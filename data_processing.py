@@ -14,19 +14,14 @@ def get_passing_plays(year, week_start, week_end):
 
     # Get all passing plays
     passing_play_data = get_play_data(year=year, pass_only=True)
-    # print(len(passing_play_data))
-    # print(passing_play_data.head())
 
-    # Get tracking data of passing plays
+    # Get tracking data of all plays
     tracking_data = get_tracking_data(year=year, week_start=week_start, week_end=week_end)
-    #TODO: Normalize the direction of all tracking data
-    # filtered_tracking_data = []
-    # for week_df in tracking_data:
-    #     merged = week_df.merge(passing_play_data[['gameId', 'playId']], on=['gameId', 'playId'], how='inner')
-    #     filtered_tracking_data.append(merged)
 
+    # Get only tracking data of passing plays
     filtered_tracking_data = filter_tracking_data(tracking_data, passing_play_data)
 
+    # Flip spatial features to always have offense going left-to-right
     filtered_norm_tracking_data = normalize_field_direction(filtered_tracking_data)
 
     return passing_play_data, filtered_norm_tracking_data
@@ -43,19 +38,19 @@ def filter_tracking_data(tracking_data, passing_play_data):
     return filtered_tracking_data
 
 
-def normalize_field_direction(tracking_data, normalize_direction=True):
+def normalize_field_direction(tracking_data):
     normalized_tracking_data = []
 
     # Flip spatial features so that offense is always going from left-to-right
     for week_df in tracking_data:
-        if normalize_direction:
-            left_mask = week_df['playDirection'] == 'left'
-            week_df.loc[left_mask, 'x'] = FIELD_LENGTH - week_df.loc[left_mask, 'x']
-            week_df.loc[left_mask, 'o'] = (180 - week_df.loc[left_mask, 'o']) % 360
-            week_df.loc[left_mask, 'dir'] = (180 - week_df.loc[left_mask, 'dir']) % 360
-            week_df.loc[left_mask, 'playDirection'] = 'right_norm'
+        week_df = week_df.copy()
 
-        # merged = week_df.merge(passing_play_data[['gameId', 'playId']], on=['gameId', 'playId'], how='inner')
+        left_mask = week_df['playDirection'] == 'left'
+        week_df.loc[left_mask, 'x'] = FIELD_LENGTH - week_df.loc[left_mask, 'x']
+        week_df.loc[left_mask, 'o'] = (180 - week_df.loc[left_mask, 'o']) % 360
+        week_df.loc[left_mask, 'dir'] = (180 - week_df.loc[left_mask, 'dir']) % 360
+        week_df.loc[left_mask, 'playDirection'] = 'right_norm'
+
         normalized_tracking_data.append(week_df)
 
     return normalized_tracking_data
@@ -184,23 +179,45 @@ def scale_player_coordinates(player_x, player_y, x_scale=128/FIELD_LENGTH, y_sca
 
 def plot_frame(df, frame_id, title):
     frame = df[df['frameId'] == frame_id]
-    plt.figure(figsize=(12, 6.5))
+    fig, ax = plt.subplots(figsize=(12, 6.5))
 
+    # Set green background for the field
+    ax.set_facecolor('mediumseagreen')
+
+    # Draw red end zone (left) and blue end zone (right)
+    ax.axvspan(0, 10, color='#ff5959', zorder=1)
+    ax.axvspan(110, 120, color='#5252ff', zorder=1)
+
+    # Draw yard lines every 10 yards
+    for x in range(10, 111, 10):
+        ax.axvline(x=x, color='white', linewidth=1.5, zorder=2)
+
+    # Draw hash marks
+    ax.axhline(y=23.58, color='white', linestyle='dotted', linewidth=1, zorder=0)
+    ax.axhline(y=FIELD_WIDTH - 23.58, color='white', linestyle='dotted', linewidth=1, zorder=0)
+
+    # Handle team colors
     teams = df['club'].unique().tolist()
     teams.remove('football')
-    print('TEAMS:', teams)
-    plt.scatter(frame['x'], frame['y'], c=frame['club'].map({teams[0]: 'blue', teams[1]: 'red', 'football': 'black'}), s=60)
+    color_map = {teams[0]: 'blue', teams[1]: 'red', 'football': 'black'}
 
+    ax.scatter(frame['x'], frame['y'], c=frame['club'].map(color_map), s=60, zorder=3)
+
+    # Add jersey numbers or "ball"
     for _, row in frame.iterrows():
-        plt.text(row['x']+0.5, row['y'], 'ball' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber']), fontsize=8)
+        label = 'ball' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber'])
+        ax.text(row['x'] + 0.5, row['y'], label, fontsize=8, zorder=4)
 
-    plt.xlim(0, 120)
-    plt.ylim(0, 53.3)
-    plt.title(title)
-    plt.xlabel('X (Field Length)')
-    plt.ylabel('Y (Sideline to Sideline)')
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.grid(True)
+    # Field settings
+    ax.set_xlim(0, 120)
+    ax.set_ylim(0, 53.3)
+    ax.set_title(title)
+    ax.set_xlabel('X (Field Length)')
+    ax.set_ylabel('Y (Sideline to Sideline)')
+    ax.set_aspect('equal', adjustable='box')
+    ax.grid(False)
+
     plt.savefig(f'{title}.png')
+    plt.close()
 
     

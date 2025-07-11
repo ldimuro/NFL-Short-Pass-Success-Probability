@@ -36,7 +36,7 @@ def main():
 
     if is_testing:
         # 900 for left dir
-        test_play = 96#800 #705, 724
+        test_play = 115#800 #705, 724
 
         passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
         print(passing_play_data.iloc[test_play])
@@ -54,7 +54,7 @@ def main():
         # print(play_frames)
 
         frame_num = play_frames['frameId'].iloc[0]
-        data_processing.plot_frame(play_frames, frame_num, f'final{test_play}')
+        data_processing.plot_frame(play_frames, frame_num, f'final_norm{test_play}')
 
 
         # Get ball location
