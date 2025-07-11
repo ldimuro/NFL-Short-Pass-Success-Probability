@@ -7,6 +7,7 @@ import math
 
 FIELD_LENGTH = 120.0
 FIELD_WIDTH = 53.33
+CENTER_FIELD = 60.0
 
 
 def get_passing_plays(year, week_start, week_end):
@@ -54,6 +55,17 @@ def normalize_field_direction(tracking_data):
         normalized_tracking_data.append(week_df)
 
     return normalized_tracking_data
+
+
+def normalize_to_center(play_frames, ball_coord):
+    normalized_play_frames = play_frames.copy()
+    ball_x, ball_y = ball_coord
+
+    shift_x = CENTER_FIELD - ball_x
+    normalized_play_frames['x'] += shift_x
+
+    return normalized_play_frames
+
 
 
 # For all passing plays, obtain all frames for each play beginning at "ball_snap" and ending on "pass_forward"/"qb_sack"/"qb_strip_sack"/"run"
