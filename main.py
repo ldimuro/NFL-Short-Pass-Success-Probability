@@ -32,12 +32,13 @@ def main():
     player_data = data_processing.get_player_data(year=2022)
 
     print('passing play data:', len(passing_play_data))
-    print('tracking data week #1:', len(passing_tracking_data[0]))
+    print('tracking data week #1:', len(passing_tracking_data))
 
     if is_testing:
-        test_play = 724#705
+        # 900 for left dir
+        test_play = 96#800 #705, 724
 
-        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200]
+        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
         print(passing_play_data.iloc[test_play])
 
         passing_frames_dict = data_processing.get_pocket_frames(passing_play_data.iloc[[test_play]], passing_tracking_data) #passing_play_data.iloc[[0]]
@@ -48,8 +49,13 @@ def main():
     all_def_players = player_data[player_data['position'].isin(defense_rush_positions)]['nflId'].unique()
     all_qbs = player_data[player_data['position'] == 'QB']['nflId'].unique()
 
+    i = 0
     for play,play_frames in passing_frames_dict.items():
-        print(play_frames)
+        # print(play_frames)
+
+        frame_num = play_frames['frameId'].iloc[0]
+        data_processing.plot_frame(play_frames, frame_num, f'final{test_play}')
+
 
         # Get ball location
         ball_x, ball_y = play_frames[(play_frames['displayName'] == 'football') & (play_frames['event'] == 'ball_snap')].iloc[0][['x', 'y']] #play_frames.iloc[0][['x', 'y']]
@@ -64,6 +70,16 @@ def main():
         data_processing.detect_rushers(all_def_players, play_frames, (ball_x, ball_y), (qb_x, qb_y))
 
     # print(player_data)
+
+    # for i in range(120):
+    #     for j in range(53):
+    #         if i == 59:
+    #             print('=', end='')
+    #         elif i > 9 and i < 109:
+    #             print('•', end='')
+    #         else:
+    #             print('/', end='')
+    #     print()
 
 
 

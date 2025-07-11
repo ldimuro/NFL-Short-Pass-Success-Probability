@@ -1,6 +1,8 @@
 import pandas as pd
 from pandas import DataFrame
 import numpy as np
+import matplotlib.pyplot as plt
+import math
 
 
 FIELD_LENGTH = 120.0
@@ -18,12 +20,45 @@ def get_passing_plays(year, week_start, week_end):
     # Get tracking data of passing plays
     tracking_data = get_tracking_data(year=year, week_start=week_start, week_end=week_end)
     #TODO: Normalize the direction of all tracking data
+    # filtered_tracking_data = []
+    # for week_df in tracking_data:
+    #     merged = week_df.merge(passing_play_data[['gameId', 'playId']], on=['gameId', 'playId'], how='inner')
+    #     filtered_tracking_data.append(merged)
+
+    filtered_tracking_data = filter_tracking_data(tracking_data, passing_play_data)
+
+    filtered_norm_tracking_data = normalize_field_direction(filtered_tracking_data)
+
+    return passing_play_data, filtered_norm_tracking_data
+
+
+def filter_tracking_data(tracking_data, passing_play_data):
     filtered_tracking_data = []
+
+    # Filter out all tracking data for plays that are not included in 'passing_play_data'
     for week_df in tracking_data:
         merged = week_df.merge(passing_play_data[['gameId', 'playId']], on=['gameId', 'playId'], how='inner')
         filtered_tracking_data.append(merged)
 
-    return passing_play_data, filtered_tracking_data
+    return filtered_tracking_data
+
+
+def normalize_field_direction(tracking_data, normalize_direction=True):
+    normalized_tracking_data = []
+
+    # Flip spatial features so that offense is always going from left-to-right
+    for week_df in tracking_data:
+        if normalize_direction:
+            left_mask = week_df['playDirection'] == 'left'
+            week_df.loc[left_mask, 'x'] = FIELD_LENGTH - week_df.loc[left_mask, 'x']
+            week_df.loc[left_mask, 'o'] = (180 - week_df.loc[left_mask, 'o']) % 360
+            week_df.loc[left_mask, 'dir'] = (180 - week_df.loc[left_mask, 'dir']) % 360
+            week_df.loc[left_mask, 'playDirection'] = 'right_norm'
+
+        # merged = week_df.merge(passing_play_data[['gameId', 'playId']], on=['gameId', 'playId'], how='inner')
+        normalized_tracking_data.append(week_df)
+
+    return normalized_tracking_data
 
 
 # For all passing plays, obtain all frames for each play beginning at "ball_snap" and ending on "pass_forward"/"qb_sack"/"qb_strip_sack"/"run"
@@ -141,5 +176,31 @@ def scale_player_coordinates(player_x, player_y, x_scale=128/FIELD_LENGTH, y_sca
     x_scaled = player_x * x_scale
     y_scaled = player_y * y_scale
     return x_scaled, y_scaled
+
+
+
+
+
+
+def plot_frame(df, frame_id, title):
+    frame = df[df['frameId'] == frame_id]
+    plt.figure(figsize=(12, 6.5))
+
+    teams = df['club'].unique().tolist()
+    teams.remove('football')
+    print('TEAMS:', teams)
+    plt.scatter(frame['x'], frame['y'], c=frame['club'].map({teams[0]: 'blue', teams[1]: 'red', 'football': 'black'}), s=60)
+
+    for _, row in frame.iterrows():
+        plt.text(row['x']+0.5, row['y'], 'ball' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber']), fontsize=8)
+
+    plt.xlim(0, 120)
+    plt.ylim(0, 53.3)
+    plt.title(title)
+    plt.xlabel('X (Field Length)')
+    plt.ylabel('Y (Sideline to Sideline)')
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.grid(True)
+    plt.savefig(f'{title}.png')
 
     
