@@ -36,7 +36,7 @@ def main():
 
     if is_testing:
         # 900 for left dir
-        test_play = 96#800 #705, 724
+        test_play = 1104#800 #705, 724
 
         passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
         print(passing_play_data.iloc[test_play])
@@ -50,9 +50,11 @@ def main():
     all_qbs = player_data[player_data['position'] == 'QB']['nflId'].unique()
 
     for play,play_frames in passing_frames_dict.items():
+        game_id, play_id = play
+        play_data = passing_play_data[(passing_play_data['gameId'] == game_id) & 
+                        (passing_play_data['playId'] == play_id)].iloc[0]
 
-        # frame_num = play_frames['frameId'].iloc[0]
-        # data_processing.plot_frame(play_frames, frame_num, f'final_norm{test_play}')
+        data_processing.plot_frame(play_frames, play_data, f'final_norm{test_play}')
 
         # Get ball location
         ball_x, ball_y = play_frames[(play_frames['displayName'] == 'football') & (play_frames['event'] == 'ball_snap')].iloc[0][['x', 'y']] #play_frames.iloc[0][['x', 'y']]
@@ -64,10 +66,11 @@ def main():
         qb_display = qb['displayName']
         print(qb_display, qb_x, qb_y)
 
+        print('PLAY:\n', play_data)
+
         # Normalize the ball and all players to center of field
         centered_play_frames = data_processing.normalize_to_center(play_frames, (ball_x, ball_y))
-        # frame_num = centered_play_frames['frameId'].iloc[0]
-        # data_processing.plot_frame(centered_play_frames, frame_num, f'final_norm_centered{test_play}')
+        data_processing.plot_frame(centered_play_frames, play_data, f'final_norm_centered{test_play}')
 
         # data_processing.detect_rushers(all_def_players, play_frames, (ball_x, ball_y), (qb_x, qb_y))
 

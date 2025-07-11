@@ -189,16 +189,20 @@ def scale_player_coordinates(player_x, player_y, x_scale=128/FIELD_LENGTH, y_sca
 
 
 
-def plot_frame(df, frame_id, title):
-    frame = df[df['frameId'] == frame_id]
+def plot_frame(frames, play_data, title):
+    frame_id = frames['frameId'].iloc[0]
+    frame = frames[frames['frameId'] == frame_id]
     fig, ax = plt.subplots(figsize=(12, 6.5))
 
     # Set green background for the field
     ax.set_facecolor('mediumseagreen')
 
+    off_color = team_colors[play_data['possessionTeam']]
+    def_color = team_colors[play_data['defensiveTeam']]
+
     # Draw red end zone (left) and blue end zone (right)
-    ax.axvspan(0, 10, color='#ff5959', zorder=1)
-    ax.axvspan(110, 120, color='#5252ff', zorder=1)
+    ax.axvspan(0, 10, color=off_color, zorder=1)
+    ax.axvspan(110, 120, color=def_color, zorder=1)
 
     # Draw yard lines every 10 yards
     for x in range(10, 111, 10):
@@ -209,9 +213,9 @@ def plot_frame(df, frame_id, title):
     ax.axhline(y=FIELD_WIDTH - 23.58, color='white', linestyle='dotted', linewidth=1, zorder=0)
 
     # Handle team colors
-    teams = df['club'].unique().tolist()
+    teams = frames['club'].unique().tolist()
     teams.remove('football')
-    color_map = {teams[0]: 'blue', teams[1]: 'red', 'football': 'black'}
+    color_map = {teams[0]: team_colors[teams[0]], teams[1]: team_colors[teams[1]], 'football': 'black'}
 
     ax.scatter(frame['x'], frame['y'], c=frame['club'].map(color_map), s=60, zorder=3)
 
@@ -229,7 +233,41 @@ def plot_frame(df, frame_id, title):
     ax.set_aspect('equal', adjustable='box')
     ax.grid(False)
 
-    plt.savefig(f'{title}.png')
+    plt.savefig(f'plots/{title}.png')
     plt.close()
 
-    
+
+team_colors = {
+    'ARI': '#97233F',
+    'ATL': '#A71930',
+    'BAL': '#241773',
+    'BUF': '#00338D',
+    'CAR': '#0085CA',
+    'CHI': '#0B162A',
+    'CIN': '#FB4F14',
+    'CLE': '#311D00',
+    'DAL': '#003594',
+    'DEN': '#FB4F14',
+    'DET': '#0076B6',
+    'GB':  '#203731',
+    'HOU': '#03202F',
+    'IND': '#002C5F',
+    'JAX': '#006778',
+    'KC':  '#E31837',
+    'LV':  '#000000',
+    'LAC': '#002A5E',
+    'LAR': '#003594',
+    'MIA': '#008E97',
+    'MIN': '#4F2683',
+    'NE':  '#002244',
+    'NO':  '#D3BC8D',
+    'NYG': '#0B2265',
+    'NYJ': '#125740',
+    'PHI': '#004C54',
+    'PIT': '#FFB612',
+    'SEA': '#69BE28',
+    'SF':  '#AA0000',
+    'TB':  '#D50A0A',
+    'TEN': '#4B92DB',
+    'WAS': '#773141'
+}
