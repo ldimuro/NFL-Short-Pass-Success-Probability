@@ -8,6 +8,9 @@ import math
 FIELD_LENGTH = 120.0
 FIELD_WIDTH = 53.33
 CENTER_FIELD = 60.0
+OFF_GOALLINE = 10.0
+DEF_GOALLINE = 110.0
+SIDELINE_TO_HASH = 23.58
 
 
 def get_passing_plays(year, week_start, week_end):
@@ -56,11 +59,11 @@ def normalize_field_direction(tracking_data):
 
     return normalized_tracking_data
 
-
 def normalize_to_center(play_frames, ball_coord):
     normalized_play_frames = play_frames.copy()
     ball_x, ball_y = ball_coord
 
+    # Place ball x-axis at center field, and adjust all other players' positions around it
     shift_x = CENTER_FIELD - ball_x
     normalized_play_frames['x'] += shift_x
 
@@ -189,10 +192,17 @@ def scale_player_coordinates(player_x, player_y, x_scale=128/FIELD_LENGTH, y_sca
 
 
 
-def plot_frame(frames, play_data, title):
+def plot_frame(frames, play_data, file_name, zoom=True):
     frame_id = frames['frameId'].iloc[0]
     frame = frames[frames['frameId'] == frame_id]
-    fig, ax = plt.subplots(figsize=(12, 6.5))
+    fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6))
+
+    ball = frame[frame['displayName'] == 'football'].iloc[0]
+    ball_x = ball['x']
+    ball_y = ball['y']
+
+    zoom_offset_x = 15
+    zoom_offset_y = 8
 
     # Set green background for the field
     ax.set_facecolor('mediumseagreen')
@@ -205,35 +215,59 @@ def plot_frame(frames, play_data, title):
     ax.axvspan(110, 120, color=def_color, zorder=1)
 
     # Draw yard lines every 10 yards
-    for x in range(10, 111, 10):
-        ax.axvline(x=x, color='white', linewidth=1.5, zorder=2)
+    for x in range(10, 111, 5):
+        ax.axvline(x=x, color='white', linewidth=4 if zoom else 1, zorder=2)
+
+    # Draw Center Field and Goalines
+    ax.axvline(x=CENTER_FIELD, color='white', linewidth=6 if zoom else 2, zorder=2.1)
+    ax.axvline(x=OFF_GOALLINE, color='white', linewidth=6 if zoom else 2, zorder=2.1)
+    ax.axvline(x=DEF_GOALLINE, color='white', linewidth=6 if zoom else 2, zorder=2.1)
 
     # Draw hash marks
-    ax.axhline(y=23.58, color='white', linestyle='dotted', linewidth=1, zorder=0)
-    ax.axhline(y=FIELD_WIDTH - 23.58, color='white', linestyle='dotted', linewidth=1, zorder=0)
+    ax.axhline(y=SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
+    ax.axhline(y=FIELD_WIDTH - SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
 
     # Handle team colors
     teams = frames['club'].unique().tolist()
     teams.remove('football')
-    color_map = {teams[0]: team_colors[teams[0]], teams[1]: team_colors[teams[1]], 'football': 'black'}
+    color_map = {teams[0]: team_colors[teams[0]], teams[1]: team_colors[teams[1]], 'football': '#dec000'}
 
-    ax.scatter(frame['x'], frame['y'], c=frame['club'].map(color_map), s=60, zorder=3)
+    # Add ball
+    football = frame[frame['displayName'] == 'football']
+    ax.scatter(football['x'], football['y'], c='#dec000', s=500 if zoom else 25, marker='o',zorder=3.1)
 
-    # Add jersey numbers or "ball"
+    # Add players
+    players = frame[frame['displayName'] != 'football']
+    ax.scatter(players['x'], players['y'], c=players['club'].map(color_map), s=1000 if zoom else 60, zorder=3)
+
+    # Add jersey numbers
     for _, row in frame.iterrows():
-        label = 'ball' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber'])
-        ax.text(row['x'] + 0.5, row['y'], label, fontsize=8, zorder=4)
+        # Only plot the labels of players in frame
+        if (row['x'] > ball_x-zoom_offset_x and row['x'] <= ball_x+zoom_offset_x) and (row['y'] > ball_y-zoom_offset_y and row['y'] <= ball_y+zoom_offset_y) or not zoom:
+            label = '' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber'])
+            ax.text(row['x'] + (0.6 if zoom else 0.5), row['y'], label, fontsize=16 if zoom else 8, zorder=4)
 
     # Field settings
-    ax.set_xlim(0, 120)
-    ax.set_ylim(0, 53.3)
-    ax.set_title(title)
-    ax.set_xlabel('X (Field Length)')
-    ax.set_ylabel('Y (Sideline to Sideline)')
+    if zoom:
+        plt.xlim(ball_x - zoom_offset_x, ball_x + zoom_offset_x)
+        plt.ylim(ball_y - zoom_offset_y, ball_y + zoom_offset_y)
+    else:
+        plt.xlim(0, 120)
+        plt.ylim(0, 53.3)
+
+    title = f"game: {play_data['gameId']}, play: {play_data['playId']}, event: {str(frame['event'].iloc[0])}"
+    fig.suptitle(title, fontsize=18)
+
+    suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
+    play_state = f"{play_data['possessionTeam']} vs. {play_data['defensiveTeam']}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
+    
+    fig.text(0.5, 0.90, play_state, ha='center', fontsize=16)
+
     ax.set_aspect('equal', adjustable='box')
     ax.grid(False)
 
-    plt.savefig(f'plots/{title}.png')
+    plt.tight_layout()
+    plt.savefig(f"plots/{file_name}{'_zoomed' if zoom else ''}.png")
     plt.close()
 
 
@@ -269,5 +303,5 @@ team_colors = {
     'SF':  '#AA0000',
     'TB':  '#D50A0A',
     'TEN': '#4B92DB',
-    'WAS': '#773141'
+    'WAS': '#773141',
 }
