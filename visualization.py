@@ -86,7 +86,7 @@ def plot_frame(frame, play_data, file_name, zoom):#frames, play_data, file_name,
     plt.close()
 
 
-def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False):
+def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False, loop=True):
     print('play_data:', play_data)
     print('frames:\n', frames)
 
@@ -118,7 +118,8 @@ def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False):
     ])
 
     # Create and save GIF
-    with imageio.get_writer(gif_output_path, mode='I', duration=0.1, loop=0) as writer:
+    loops = 0 if loop else 1
+    with imageio.get_writer(gif_output_path, mode='I', duration=0.1, loop=loops) as writer:
         for filename in frame_files:
             image = imageio.imread(filename)
             writer.append_data(image)
