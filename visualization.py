@@ -3,7 +3,8 @@ import constants
 import math
 
 def plot_frame(frames, play_data, file_name, zoom=True):
-    frame_id = frames['frameId'].iloc[0]
+    frame_id = frames['frameId'].iloc[-1]
+    print('plotting frame_id:', frame_id)
     frame = frames[frames['frameId'] == frame_id]
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6))
 
@@ -106,7 +107,7 @@ team_colors = {
     'NO':  '#D3BC8D',
     'NYG': '#0B2265',
     'NYJ': '#125740',
-    'PHI': '#004C54',
+    'PHI': '#004a50',
     'PIT': '#FFB612',
     'SEA': '#69BE28',
     'SF':  '#AA0000',
