@@ -8,10 +8,12 @@ import pandas as pd
 import os
 # from fnn import FNN
 import data_processing
+import get_data
 import torch
 import random
 from sklearn.utils import check_random_state
 import matplotlib.pyplot as plt
+import visualization
 
 
 def set_seed(seed_value=42):
@@ -28,15 +30,15 @@ def main():
 
     is_testing = True
 
-    passing_play_data, passing_tracking_data = data_processing.get_passing_plays(year=2022, week_start=1, week_end=1 if is_testing else 9)
-    player_data = data_processing.get_player_data(year=2022)
+    passing_play_data, passing_tracking_data = get_data.get_passing_plays(year=2022, week_start=1, week_end=1 if is_testing else 9)
+    player_data = get_data.get_player_data(year=2022)
 
     print('passing play data:', len(passing_play_data))
     print('tracking data week #1:', len(passing_tracking_data))
 
     if is_testing:
         # 900 for left dir
-        test_play = 469#800 #705, 724, 105, 469, 658
+        test_play = 216#800 #705, 724, 105, 469, 658
 
         passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
         print(passing_play_data.iloc[test_play])
@@ -53,7 +55,7 @@ def main():
         game_id, play_id = play
         play_data = passing_play_data[(passing_play_data['gameId'] == game_id) & (passing_play_data['playId'] == play_id)].iloc[0]
 
-        data_processing.plot_frame(play_frames, play_data, f'{game_id}_{play_id}_norm', zoom=True)
+        visualization.plot_frame(play_frames, play_data, f'{game_id}_{play_id}_norm', zoom=True)
 
         # Get ball location
         ball_x, ball_y = play_frames[(play_frames['displayName'] == 'football') & (play_frames['event'] == 'ball_snap')].iloc[0][['x', 'y']] #play_frames.iloc[0][['x', 'y']]
