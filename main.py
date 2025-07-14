@@ -40,12 +40,14 @@ def main():
     handoff_play_ids = set(zip(handoff_plays['gameId'], handoff_plays['playId']))
     run_play_data = all_play_data[all_play_data.apply(lambda row: (row['gameId'], row['playId']) in handoff_play_ids, axis=1)]
     run_tracking_data = data_processing.filter_tracking_data(all_tracking_data, run_play_data)
+    run_tracking_data = data_processing.normalize_field_direction(run_tracking_data)
 
     # Filter to include only plays that contain a 'play_action' event
     play_action_plays = all_tracking_df[all_tracking_df['event'] == 'play_action'][['gameId', 'playId']]
     play_action_play_ids = set(zip(play_action_plays['gameId'], play_action_plays['playId']))
     play_action_play_data = all_play_data[all_play_data.apply(lambda row: (row['gameId'], row['playId']) in play_action_play_ids, axis=1)]
     play_action_tracking_data = data_processing.filter_tracking_data(all_tracking_data, play_action_play_data)
+    play_action_tracking_data = data_processing.normalize_field_direction(play_action_tracking_data)
 
     print('# of handoff plays:\t', len(run_play_data))
     print('# of play-action plays:\t', len(play_action_play_data))
@@ -55,26 +57,31 @@ def main():
 
     
     if is_testing:
-        test_play = 256
+        test_pa_play = 20#256
 
         play_action_play_data = play_action_play_data[play_action_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
-        print(play_action_play_data.iloc[test_play])
-        play_action_frames_dict = data_processing.get_relevant_frames(play_action_play_data.iloc[[test_play]], play_action_tracking_data, start_events=['START'], end_events=['play_action']) #passing_play_data.iloc[[0]]
+        print(play_action_play_data.iloc[test_pa_play])
+        play_action_frames_dict = data_processing.get_relevant_frames(play_action_play_data.iloc[[test_pa_play]], play_action_tracking_data, start_events=['START'], end_events=['play_action']) #passing_play_data.iloc[[0]]
 
+        test_run_play = 10
         run_play_data = run_play_data[run_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
-        print(run_play_data.iloc[test_play])
-        run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[[test_play]], run_tracking_data, start_events=['START'], end_events=['handoff']) #passing_play_data.iloc[[0]]
+        print(run_play_data.iloc[test_run_play])
+        run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[[test_run_play]], run_tracking_data, start_events=['START'], end_events=['handoff']) #passing_play_data.iloc[[0]]
 
     
     for play,play_frames in play_action_frames_dict.items():
         game_id, play_id = play
         play_data = play_action_play_data[(play_action_play_data['gameId'] == game_id) & (play_action_play_data['playId'] == play_id)].iloc[0]
-        visualization.plot_frame(play_frames, play_data, f'{game_id}_{play_id}_norm', zoom=True)
+        # visualization.plot_frame(play_frames, play_data, f'{game_id}_{play_id}_norm', zoom=True)
+        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_pa_norm')
 
     for play,play_frames in run_frames_dict.items():
         game_id, play_id = play
         play_data = run_play_data[(run_play_data['gameId'] == game_id) & (run_play_data['playId'] == play_id)].iloc[0]
-        visualization.plot_frame(play_frames, play_data, f'{game_id}_{play_id}_norm', zoom=True)
+        # visualization.plot_frame(play_frames, play_data, f'{game_id}_{play_id}_norm', zoom=True)
+        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_run_norm')
+
+
 
 
 

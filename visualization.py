@@ -1,11 +1,16 @@
 import matplotlib.pyplot as plt
 import constants
 import math
+from pandas import DataFrame
+import os
+import imageio.v2 as imageio
+import shutil
 
-def plot_frame(frames, play_data, file_name, zoom=True):
-    frame_id = frames['frameId'].iloc[-1]
-    print('plotting frame_id:', frame_id)
-    frame = frames[frames['frameId'] == frame_id]
+def plot_frame(frame, play_data, file_name, zoom):#frames, play_data, file_name, zoom=True):
+    # frame_id = frames['frameId'].iloc[-1]
+    # print('plotting frame_id:', frame_id)
+    # frame = frames[frames['frameId'] == frame_id]
+
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6))
 
     ball = frame[frame['displayName'] == 'football'].iloc[0]
@@ -39,7 +44,7 @@ def plot_frame(frames, play_data, file_name, zoom=True):
     ax.axhline(y=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
 
     # Handle team colors
-    teams = frames['club'].unique().tolist()
+    teams = frame['club'].unique().tolist()
     teams.remove('football')
     color_map = {teams[0]: team_colors[teams[0]], teams[1]: team_colors[teams[1]], 'football': '#dec000'}
 
@@ -66,7 +71,7 @@ def plot_frame(frames, play_data, file_name, zoom=True):
         plt.xlim(0, 120)
         plt.ylim(0, 53.3)
 
-    title = f"game: {play_data['gameId']}, play: {play_data['playId']}, event: {str(frame['event'].iloc[0])}"
+    title = f"game: {play_data['gameId']}, play: {play_data['playId']}, frame: {frame['frameId'].iloc[0]}, event: {str(frame['event'].iloc[0])}"
     fig.suptitle(title, fontsize=18)
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
@@ -77,8 +82,55 @@ def plot_frame(frames, play_data, file_name, zoom=True):
     ax.grid(False)
 
     plt.tight_layout()
-    plt.savefig(f"plots/{file_name}{'_zoomed' if zoom else ''}.png")
+    plt.savefig(f"plots/{file_name}/{file_name}_{frame['frameId'].iloc[0]:04d}{'_zoomed' if zoom else ''}.png")
     plt.close()
+
+
+def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False):
+    print('play_data:', play_data)
+    print('frames:\n', frames)
+
+    frame_start = frames['frameId'].min()
+    frame_end = frames['frameId'].max()
+
+    print('frame_start:', frame_start)
+    print('frame_end:', frame_end)
+
+    # Create new folder for frame plots
+    folder_name = f'plots/{file_name}'
+    os.makedirs(folder_name, exist_ok=True)
+
+    print('creating gif...')
+
+    # Create a plot for every frame in the range
+    for frame_id in range(frame_start, frame_end+1):
+        frame = frames[frames['frameId'] == frame_id]
+        plot_frame(frame, play_data, file_name, zoom=zoom)
+    
+    frames_folder = f'plots/{file_name}'
+    gif_output_path = f"play_gifs/{file_name}{'_zoomed' if zoom else ''}.gif"
+
+    # Get list of image filenames in sorted order
+    frame_files = sorted([
+        os.path.join(frames_folder, fname)
+        for fname in os.listdir(frames_folder)
+        if fname.endswith('.png')
+    ])
+
+    # Create and save GIF
+    with imageio.get_writer(gif_output_path, mode='I', duration=0.1, loop=0) as writer:
+        for filename in frame_files:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+
+    # Delete individual frame plots when completed
+    if os.path.exists(frames_folder):
+        shutil.rmtree(frames_folder)
+        print(f'Deleted folder: {frames_folder}')
+    else:
+        print(f'Folder not found: {frames_folder}')
+
+    print('gif created')
 
 
 team_colors = {
@@ -100,7 +152,7 @@ team_colors = {
     'KC':  '#E31837',
     'LV':  '#000000',
     'LAC': '#2472ca',
-    'LAR': '#003594',
+    'LA': '#003594',
     'MIA': '#008E97',
     'MIN': '#4F2683',
     'NE':  '#002244',
