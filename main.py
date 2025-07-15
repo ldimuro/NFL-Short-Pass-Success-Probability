@@ -27,7 +27,7 @@ def set_seed(seed_value=42):
 
 def main():
     print('running main')
-    set_seed()
+    # set_seed()
 
     is_testing = True
 
@@ -62,7 +62,6 @@ def main():
     print('ALL PA EVENTS:', play_action_tracking_data[0]['event'].value_counts())
 
     sample_num = 3
-
 
     if is_testing:
         test_pa_plays = random.sample(range(len(play_action_play_data)), sample_num)

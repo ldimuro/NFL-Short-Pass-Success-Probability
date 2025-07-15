@@ -114,7 +114,11 @@ def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_e
             else:
                 start_index = tracking_play[tracking_play['event'].isin(start_events)].index
 
-            end_index = tracking_play[tracking_play['event'].isin(end_events)].index
+            # Plays will end with NA
+            if 'END' in end_events:
+                end_index = tracking_play[tracking_play['event'].isna()].index
+            else:
+                end_index = tracking_play[tracking_play['event'].isin(end_events)].index
 
             if not start_index.empty and not end_index.empty:
                 tracking_play = tracking_play.loc[start_index[0]:end_index[-1]].reset_index(drop=True)
