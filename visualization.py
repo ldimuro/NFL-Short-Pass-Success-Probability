@@ -87,8 +87,8 @@ def plot_frame(frame, play_data, file_name, zoom):#frames, play_data, file_name,
 
 
 def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False, loop=True):
-    print('play_data:', play_data)
-    print('frames:\n', frames)
+    # print('play_data:', play_data)
+    # print('frames:\n', frames)
 
     frame_start = frames['frameId'].min()
     frame_end = frames['frameId'].max()

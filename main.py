@@ -14,6 +14,7 @@ import random
 from sklearn.utils import check_random_state
 import matplotlib.pyplot as plt
 import visualization
+import random
 
 
 def set_seed(seed_value=42):
@@ -49,37 +50,45 @@ def main():
     play_action_tracking_data = data_processing.filter_tracking_data(all_tracking_data, play_action_play_data)
     play_action_tracking_data = data_processing.normalize_field_direction(play_action_tracking_data)
 
+
+    # Remove all plays less than 10 frames
+    # Make sure there is no overlap between play-action and run plays
+    # Remove plays that involve a play-action into a handoff
+
     print('# of handoff plays:\t', len(run_play_data))
     print('# of play-action plays:\t', len(play_action_play_data))
 
     print('ALL RUSH EVENTS:', run_tracking_data[0]['event'].value_counts())
     print('ALL PA EVENTS:', play_action_tracking_data[0]['event'].value_counts())
 
-    
+    sample_num = 3
+
+
     if is_testing:
-        test_pa_play = 20#256
+        test_pa_plays = random.sample(range(len(play_action_play_data)), sample_num)
 
         play_action_play_data = play_action_play_data[play_action_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
-        print(play_action_play_data.iloc[test_pa_play])
-        play_action_frames_dict = data_processing.get_relevant_frames(play_action_play_data.iloc[[test_pa_play]], play_action_tracking_data, start_events=['line_set'], end_events=['play_action']) #passing_play_data.iloc[[0]]
+        # print(play_action_play_data.iloc[test_pa_play])
+        play_action_frames_dict = data_processing.get_relevant_frames(play_action_play_data.iloc[test_pa_plays], play_action_tracking_data, start_events=['line_set'], end_events=['play_action']) #passing_play_data.iloc[[0]]
 
-        test_run_play = 10
+        test_run_plays = random.sample(range(len(run_play_data)), sample_num)
         run_play_data = run_play_data[run_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
-        print(run_play_data.iloc[test_run_play])
-        run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[[test_run_play]], run_tracking_data, start_events=['line_set'], end_events=['handoff']) #passing_play_data.iloc[[0]]
+        # print(run_play_data.iloc[test_run_play])
+        run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[test_run_plays], run_tracking_data, start_events=['line_set'], end_events=['handoff']) #passing_play_data.iloc[[0]]
+
 
     
     for play,play_frames in play_action_frames_dict.items():
         game_id, play_id = play
         play_data = play_action_play_data[(play_action_play_data['gameId'] == game_id) & (play_action_play_data['playId'] == play_id)].iloc[0]
         # visualization.plot_frame(play_frames, play_data, f'{game_id}_{play_id}_norm', zoom=True)
-        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_pa_norm', loop=False)
+        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_pa_norm', loop=False, zoom=False)
 
     for play,play_frames in run_frames_dict.items():
         game_id, play_id = play
         play_data = run_play_data[(run_play_data['gameId'] == game_id) & (run_play_data['playId'] == play_id)].iloc[0]
         # visualization.plot_frame(play_frames, play_data, f'{game_id}_{play_id}_norm', zoom=True)
-        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_run_norm', loop=False)
+        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_run_norm', loop=False, zoom=False)
 
 
 
