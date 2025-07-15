@@ -6,11 +6,7 @@ import os
 import imageio.v2 as imageio
 import shutil
 
-def plot_frame(frame, play_data, file_name, zoom):#frames, play_data, file_name, zoom=True):
-    # frame_id = frames['frameId'].iloc[-1]
-    # print('plotting frame_id:', frame_id)
-    # frame = frames[frames['frameId'] == frame_id]
-
+def plot_frame(frame, play_data, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6))
 
     ball = frame[frame['displayName'] == 'football'].iloc[0]
@@ -42,6 +38,10 @@ def plot_frame(frame, play_data, file_name, zoom):#frames, play_data, file_name,
     # Draw hash marks
     ax.axhline(y=constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
     ax.axhline(y=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
+
+    # Draw LoS and 1st-Down marker
+    ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE, color='#26248f', linewidth=6 if zoom else 2, zorder=2.2)
+    ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE + play_data['yardsToGo'], color="#f2d627", linewidth=6 if zoom else 2, zorder=2.2)
 
     # Handle team colors
     teams = frame['club'].unique().tolist()
@@ -87,7 +87,7 @@ def plot_frame(frame, play_data, file_name, zoom):#frames, play_data, file_name,
 
 
 def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False, loop=True):
-    # print('play_data:', play_data)
+    print('play_data:', play_data)
     # print('frames:\n', frames)
 
     frame_start = frames['frameId'].min()
