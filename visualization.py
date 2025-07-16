@@ -30,6 +30,54 @@ def plot_frame(frame, play_data, file_name, zoom):
     for x in range(10, 111, 5):
         ax.axvline(x=x, color='white', linewidth=4 if zoom else 1, zorder=2)
 
+    # Draw yard line numbers
+    for x in range(20, 101, 10):
+        field_val = str(x-10 if x < 60 else 110-x)
+
+        # Bottom numbers
+        ax.text(x=x, 
+                y=constants.SIDELINE_TO_HASH/2, 
+                s=f'{field_val[0]} {field_val[1]}', 
+                fontsize=16, 
+                ha='center', 
+                va='center', 
+                color='white', 
+                fontname='Times New Roman',
+                fontweight='bold')
+
+        # Top numbers
+        ax.text(x=x, 
+                y=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH/2, 
+                s=f'{field_val[0]} {field_val[1]}', 
+                fontsize=16, 
+                ha='center', 
+                va='center', 
+                color='white', 
+                fontname='Times New Roman', 
+                rotation=180,
+                fontweight='bold')
+        
+        # Arrows next to yard labels
+        if x != 60:
+            ax.text(x=x-2.5 if x < 60 else x+2.5,
+                    y=constants.SIDELINE_TO_HASH/2 + 0.4,
+                    s='\u25B6',
+                    fontsize=6,
+                    ha='center', 
+                    va='center', 
+                    color='white',
+                    rotation=180 if x < 60 else 0)
+            
+            ax.text(x=x-2.5 if x < 60 else x+2.5,
+                    y=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH/2 - 0.4,
+                    s='\u25B6',
+                    fontsize=6,
+                    ha='center', 
+                    va='center', 
+                    color='white',
+                    rotation=180 if x < 60 else 0)
+
+
     # Draw Center Field and Goalines
     ax.axvline(x=constants.CENTER_FIELD, color='white', linewidth=6 if zoom else 2, zorder=2.1)
     ax.axvline(x=constants.OFF_GOALLINE, color='white', linewidth=6 if zoom else 2, zorder=2.1)
@@ -38,6 +86,8 @@ def plot_frame(frame, play_data, file_name, zoom):
     # Draw hash marks
     ax.axhline(y=constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
     ax.axhline(y=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
+    # ax.axhline(y=0.5, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
+    # ax.axhline(y=constants.FIELD_WIDTH-0.5, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
 
     # Draw LoS and 1st-Down marker
     # ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE, color='#26248f', linewidth=6 if zoom else 2, zorder=2.2)
@@ -80,6 +130,8 @@ def plot_frame(frame, play_data, file_name, zoom):
 
     ax.set_aspect('equal', adjustable='box')
     ax.grid(False)
+    ax.set_xticks([])
+    ax.set_yticks([])
 
     plt.tight_layout()
     plt.savefig(f"plots/{file_name}/{file_name}_{frame['frameId'].iloc[0]:04d}{'_zoomed' if zoom else ''}.png")
