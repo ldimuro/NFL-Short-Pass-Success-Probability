@@ -7,7 +7,7 @@ import imageio.v2 as imageio
 import shutil
 
 def plot_frame(frame, play_data, file_name, zoom):
-    fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6))
+    fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
 
     ball = frame[frame['displayName'] == 'football'].iloc[0]
     ball_x = ball['x']
