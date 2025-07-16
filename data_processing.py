@@ -44,47 +44,6 @@ def normalize_to_center(play_frames, ball_coord):
 
 
 
-# For all passing plays, obtain all frames for each play beginning at "ball_snap" and ending on "pass_forward"/"qb_sack"/"qb_strip_sack"/"run"
-def get_pocket_frames(play_data: DataFrame, tracking_data):
-    play_tracking_dict = {}
-
-    for i,row in play_data.iterrows():
-        game_id = row['gameId']
-        play_id = row['playId']
-
-        print(f'searching for {game_id} - {play_id}')
-
-        # Look through all weeks of tracking data for specific play
-        tracking_play = None
-        for i,week_df in enumerate(tracking_data):
-            match = week_df[(week_df['gameId'] == game_id) & (week_df['playId'] == play_id)]
-            
-            if not match.empty:
-                tracking_play = match.sort_values('frameId')
-                print('FOUND in week', i+1)
-                break
-
-        if tracking_play is not None:
-
-            # Remove all frames before 'ball_snap' and after QB passes, gets sacked, or scrambles
-            start_event = 'ball_snap'
-            end_events = ['pass_forward', 'qb_sack', 'qb_strip_sack', 'run']
-            snap_index = tracking_play[tracking_play['event'] == start_event].index
-            end_index = tracking_play[tracking_play['event'].isin(end_events)].index
-
-            if not snap_index.empty and not end_index.empty:
-                tracking_play = tracking_play.loc[snap_index[0]:end_index[-1]].reset_index(drop=True)
-            else:
-                print("🚨Warning: No 'ball_snap' found in play")
-
-            # Add all relevant tracking frames to plays dict
-            play_tracking_dict[(game_id, play_id)] = tracking_play
-            print(f'processed tracking frames for {game_id} - {play_id}')
-        else:
-            print(f'🚨could not find {game_id} - {play_id}')
-
-    return play_tracking_dict
-
 
 def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_events):
     play_tracking_dict = {}

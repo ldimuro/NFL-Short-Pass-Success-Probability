@@ -86,14 +86,22 @@ def main():
         run_play_data = run_play_data[run_play_data['gameId'] <= 2022091200] # Week 1 only # 2022090800, 2022091200
         # print(run_play_data.iloc[test_run_play])
         run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[test_run_plays], run_tracking_data, start_events=['line_set'], end_events=['END']) # end_events=['handoff']
-        
+
+        rpo_play_data = rpo_play_data[rpo_play_data['gameId'] <= 2022091200]
+        test_rpo_plays = random.sample(range(len(rpo_play_data)), sample_num)
+        # print(rpo_play_data.iloc[test_rpo_play])
+        rpo_frames_dict = data_processing.get_relevant_frames(rpo_play_data.iloc[test_rpo_plays], rpo_tracking_data, start_events=['line_set'], end_events=['END'])
 
 
-    
-    for play,play_frames in play_action_frames_dict.items():
+    for play,play_frames in rpo_frames_dict.items():
         game_id, play_id = play
-        play_data = play_action_play_data[(play_action_play_data['gameId'] == game_id) & (play_action_play_data['playId'] == play_id)].iloc[0]
-        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_pa_norm', loop=False, zoom=False)
+        play_data = rpo_play_data[(rpo_play_data['gameId'] == game_id) & (rpo_play_data['playId'] == play_id)].iloc[0]
+        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_rpo_norm', loop=False, zoom=False)
+    
+    # for play,play_frames in play_action_frames_dict.items():
+    #     game_id, play_id = play
+    #     play_data = play_action_play_data[(play_action_play_data['gameId'] == game_id) & (play_action_play_data['playId'] == play_id)].iloc[0]
+    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_pa_norm', loop=False, zoom=False)
 
     # for play,play_frames in run_frames_dict.items():
     #     game_id, play_id = play

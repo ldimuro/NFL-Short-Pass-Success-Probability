@@ -40,8 +40,8 @@ def plot_frame(frame, play_data, file_name, zoom):
     ax.axhline(y=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=6 if zoom else 2, zorder=0)
 
     # Draw LoS and 1st-Down marker
-    ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE, color='#26248f', linewidth=6 if zoom else 2, zorder=2.2)
-    ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE + play_data['yardsToGo'], color="#f2d627", linewidth=6 if zoom else 2, zorder=2.2)
+    # ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE, color='#26248f', linewidth=6 if zoom else 2, zorder=2.2)
+    # ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE + play_data['yardsToGo'], color="#f2d627", linewidth=6 if zoom else 2, zorder=2.2)
 
     # Handle team colors
     teams = frame['club'].unique().tolist()
