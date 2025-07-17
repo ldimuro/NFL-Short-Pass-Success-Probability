@@ -103,7 +103,7 @@ def main():
         # rpo_frames_dict = data_processing.get_relevant_frames(rpo_play_data.iloc[test_rpo_plays], rpo_tracking_data, start_events=['line_set'], end_events=['END'])
 
 
-        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200][:2] # Week 1 only
+        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200][:10] # Week 1 only
         test_passing_plays = random.sample(range(len(passing_play_data)), sample_num)
         passing_frames_dict = data_processing.get_relevant_frames(passing_play_data.iloc[test_passing_plays], passing_tracking_data, start_events=['line_set'], end_events=['END'])
 
@@ -117,25 +117,18 @@ def main():
             players_in_play = play_tracking['nflId'].dropna().unique()
             def_players_in_play = np.intersect1d(players_in_play, all_def_players)
 
-            print(f'DEF PLAYERS in ({game_id}, {play_id}):\n')
-            print(def_players_in_play)
-
             # Calculate the time it took from ball-snap to either timeToThrow or timeToSack
             time_to_pass_result = passing_play['timeToThrow'] if not math.isnan(passing_play['timeToThrow']) else passing_play['timeToSack']
 
-            # Max time limit for a clean pocket
-            # TODO: try and estimate this number
-            max_time_to_pass = 5
+            
 
-            # The max amount of time it would take to cross LoS as rusher
-            # TODO: try and estimate this number
-            max_getoff_time = 2
+            
 
             # Extract "pressure" features
             rushing_defenders = []
             rushing_defenders_pressure_caused = []
-            total_time_to_pressure = 0
-            total_time_to_getoff = 0
+            total_times_to_pressure = []
+            total_times_to_getoff = []
 
             for def_id in def_players_in_play:
                 player= all_player_data[all_player_data['nflId'] == def_id].iloc[0]
@@ -153,11 +146,11 @@ def main():
                 # Count number of rushers (who have a non-NaN value for 'getOffTimeAsPassRusher')
                 if not math.isnan(get_off_as_rusher):
                     rushing_defenders.append(def_id)
-                    total_time_to_getoff += get_off_as_rusher
+                    total_times_to_getoff.append(get_off_as_rusher)
 
                     if caused_pressure:
                         rushing_defenders_pressure_caused.append(def_id)
-                        total_time_to_pressure += time_to_pressure_as_rusher
+                        total_times_to_pressure.append(time_to_pressure_as_rusher)
 
                 # print(f"{player['displayName']} play data:")
                 # print(f'\tcaused_pressure: {caused_pressure}')
@@ -169,39 +162,68 @@ def main():
 
 
             # If there was no pressure on the play, assign arbitrary large value
-            if total_time_to_pressure == 0:
-                total_time_to_pressure = 5
+            if len(total_times_to_pressure) == 0:
+                total_times_to_pressure = [5]
 
 
-            avg_time_to_pressure = np.round(total_time_to_pressure / len(rushing_defenders), 2)
-            ttp_heat_val = np.round(1 - (avg_time_to_pressure / max_time_to_pass), 2)
+            # Ratio of rushers to rushers that caused pressure
+            pc_heat_val = len(rushing_defenders_pressure_caused) / len(rushing_defenders)
 
-            avg_time_to_getoff = np.round(total_time_to_getoff / len(rushing_defenders), 2)
+            avg_time_to_pressure = np.round(np.sum(total_times_to_pressure) / len(rushing_defenders), 2)
+            thresh = 2 # to represent 'quick' throw
+            # ttp_heat_val = np.round(1 - (avg_time_to_pressure / max_time_to_pass), 2)
+            ttp_heat_val = np.round(np.clip(1 / (1 + np.exp(avg_time_to_pressure - thresh)), 0, 1), 2)
+
+
+            # The max amount of time it would take to cross LoS as rusher
+            # TODO: try and estimate this number
+            max_getoff_time = 2
+            avg_time_to_getoff = np.round(np.median(total_times_to_getoff) / len(rushing_defenders), 2) #median instead of mean for robustness to outliers (e.g., one slow rusher)
             ttg_heat_val = np.round(1 - (avg_time_to_getoff / max_getoff_time), 2)
 
             # Time to throw
-            ttt_heat_val = np.round(1 - (passing_play['timeInTackleBox'] / max_time_to_pass))
+            # Did QB have to bail from the pocket?
+            # ttt_heat_val = np.round(1 - (passing_play['timeInTackleBox'] / time_to_pass_result), 2)
+            ttt_heat_val = np.round(1 - np.clip(passing_play['timeInTackleBox'] / time_to_pass_result, 0, 1) ** 0.5, 2) # square root emphasizes short times
+
 
             # Outcome
-            outcome_heat_val = np.round(1 - (passing_play['timeToThrow'] if not math.isnan(passing_play['timeToThrow']) else passing_play['timeToSack'] / max_time_to_pass))
+            # Max time limit for a clean pocket
+            # TODO: try and estimate this number
+            # max_time_to_pass = 5
+            # # outcome_heat_val = np.round(1 - (passing_play['timeToThrow'] if not math.isnan(passing_play['timeToThrow']) else passing_play['timeToSack'] / max_time_to_pass), 2)
+            # # outcome_heat_val = np.clip(outcome_heat_val, 0, 1)
+            # if not math.isnan(passing_play['timeToSack']):
+            #     outcome_heat_val = np.round(passing_play['timeToSack'] / max_time_to_pass, 2)
+            #     outcome_heat_val += 0.2 # boosted for sacks
+            # else:
+            #     outcome_heat_val = np.round(passing_play['timeToThrow'] / max_time_to_pass, 2)
+            #     outcome_heat_val *= 0.5 # half-weight for non-sacks, as quick throws indicate indirect heat
             # outcome_heat_val = np.clip(outcome_heat_val, 0, 1)
 
+            penalties = 0
+            if passing_play['unblockedPressure']:
+                penalities += 0.2
 
+
+            # EXTREMELY CLEAN POCKET: 2022091113, 630
+            # IMMEDIATE PRESSURE FROM 1 DEFENDER: 2022091109, 1041
             print('==========================================================================================')
-            print(f'# OF RUSHERS ON ({game_id}, {play_id}): {len(rushing_defenders)} ({len(rushing_defenders_pressure_caused)} caused pressure)')
+            print(f'# OF RUSHERS ON ({game_id}, {play_id}): {len(rushing_defenders)} ({len(rushing_defenders_pressure_caused)} caused pressure) ({pc_heat_val} heat val)')
             print(f'Time to pass result: {time_to_pass_result}')
             print(f'Avg time to pressure for rushing defenders: {avg_time_to_pressure} ({ttp_heat_val} heat val)')
             print(f'Avg time to getoff for rushing defenders: {avg_time_to_getoff} ({ttg_heat_val} heat val)')
             print(f"QB time in tackle box: {passing_play['timeInTackleBox']} ({ttt_heat_val} heat val)")
-            print(f"Outcome: {'SACK' if not math.isnan(passing_play['timeToSack']) else 'NO SACK'} ({outcome_heat_val})")
+            # print(f"Outcome: {'SACK' if not math.isnan(passing_play['timeToSack']) else 'NO SACK'} ({outcome_heat_val})")
+            print(f'TOTAL HEAT VAL: {np.round(pc_heat_val + ttp_heat_val + ttg_heat_val + ttt_heat_val + penalties, 2)}')
 
 
 
     # Create GIFs for passing plays
-    # for play,play_frames in passing_frames_dict.items():
-    #     game_id, play_id = play
-    #     play_data = passing_play_data[(passing_play_data['gameId'] == game_id) & (passing_play_data['playId'] == play_id)].iloc[0]
-    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_passing_norm', loop=False, zoom=False)
+    for play,play_frames in passing_frames_dict.items():
+        game_id, play_id = play
+        play_data = passing_play_data[(passing_play_data['gameId'] == game_id) & (passing_play_data['playId'] == play_id)].iloc[0]
+        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_passing_norm', loop=False, zoom=False)
 
     # Create GIFs for RPO plays
     # for play,play_frames in rpo_frames_dict.items():
