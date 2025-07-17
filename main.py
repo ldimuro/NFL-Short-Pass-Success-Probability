@@ -103,13 +103,40 @@ def main():
         # rpo_frames_dict = data_processing.get_relevant_frames(rpo_play_data.iloc[test_rpo_plays], rpo_tracking_data, start_events=['line_set'], end_events=['END'])
 
 
-        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200][:10] # Week 1 only
-        test_passing_plays = random.sample(range(len(passing_play_data)), sample_num)
-        passing_frames_dict = data_processing.get_relevant_frames(passing_play_data.iloc[test_passing_plays], passing_tracking_data, start_events=['line_set'], end_events=['END'])
+        passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200] # Week 1 only
+
+
+        random_tests = random.sample(range(len(passing_play_data)), sample_num)
+        random_test_passing_plays = passing_play_data.iloc[random_tests]
+        # EXTREMELY CLEAN POCKET: (2022091113, 630), (2022091101, 1879)
+            # IMMEDIATE PRESSURE FROM 1 DEFENDER: (2022091109, 1041)
+            # TOTAL COLLAPSE: (2022091108, 614)
+            # Scored very low: (2022091101, 1492)
+            # Starts off completely clean, but then has an unblocked rusher (not labelled): (2022091101, 1166)
+            # Moderate pressure?: (2022091105, 2817)
+            # Scored average, but is very good protection: (2022091108, 2799)
+            # Avg score but feels like it should be higher (2022091107, 1642)
+            # Dont know why it statistically has a high score: (2022091106, 3050)
+            # Very high score: (2022091111, 336)
+            # Moderate pressure: (2022091105, 2817)
+        use_cases = [(2022091101, 1879), (2022091109, 1041), (2022091108, 614), (2022091101, 1492), (2022091101, 1166),
+                          (2022091105, 2817), (2022091108, 2799), (2022091107, 1642), (2022091106, 3050), (2022091111, 336),
+                          (2022091105, 2817)]
+
+        # Filter all passing_play_data to use_cases
+        test_case_set = set(use_cases)
+        use_case_plays = passing_play_data[
+            passing_play_data.apply(lambda row: (row['gameId'], row['playId']) in test_case_set, axis=1)
+        ]
+
+        plays_to_process = pd.concat([random_test_passing_plays, use_case_plays], ignore_index=True)
+        
+        # Create GIFs of randomly selected plays
+        passing_frames_dict = data_processing.get_relevant_frames(random_test_passing_plays, passing_tracking_data, start_events=['line_set'], end_events=['END'])
 
         defense_rush_positions = ['CB', 'OLB', 'DE', 'DT', 'ILB', 'FS', 'SS', 'NT', 'MLB', 'DB', 'LB']
         all_def_players = all_player_data[all_player_data['position'].isin(defense_rush_positions)]['nflId'].unique()
-        for i,passing_play in passing_play_data.iterrows():
+        for i,passing_play in plays_to_process.iterrows():
             game_id = passing_play['gameId']
             play_id = passing_play['playId']
 
@@ -167,25 +194,27 @@ def main():
 
 
             # Ratio of rushers to rushers that caused pressure
-            pc_heat_val = len(rushing_defenders_pressure_caused) / len(rushing_defenders)
+            # pc_heat_val = len(rushing_defenders_pressure_caused) / len(rushing_defenders) * 10
+            pc_heat_val = 10 * len(rushing_defenders_pressure_caused)
 
             avg_time_to_pressure = np.round(np.sum(total_times_to_pressure) / len(rushing_defenders), 2)
             thresh = 2 # to represent 'quick' throw
             # ttp_heat_val = np.round(1 - (avg_time_to_pressure / max_time_to_pass), 2)
-            ttp_heat_val = np.round(np.clip(1 / (1 + np.exp(avg_time_to_pressure - thresh)), 0, 1), 2)
+            ttp_heat_val = 0 #np.round(np.clip(1 / (1 + np.exp(avg_time_to_pressure - thresh)), 0, 1), 2)
 
 
             # The max amount of time it would take to cross LoS as rusher
             # TODO: try and estimate this number
             max_getoff_time = 2
             avg_time_to_getoff = np.round(np.median(total_times_to_getoff) / len(rushing_defenders), 2) #median instead of mean for robustness to outliers (e.g., one slow rusher)
-            ttg_heat_val = np.round(1 - (avg_time_to_getoff / max_getoff_time), 2)
+            ttg_heat_val = np.round(1 - (avg_time_to_getoff / max_getoff_time), 2) * 10
 
             # Time to throw
             # Did QB have to bail from the pocket?
             # ttt_heat_val = np.round(1 - (passing_play['timeInTackleBox'] / time_to_pass_result), 2)
-            ttt_heat_val = np.round(1 - np.clip(passing_play['timeInTackleBox'] / time_to_pass_result, 0, 1) ** 0.5, 2) # square root emphasizes short times
+            ttt_heat_val = np.round(1 - np.clip(passing_play['timeInTackleBox'] / time_to_pass_result, 0, 1) ** 0.5, 2) * 10 # square root emphasizes short times
 
+            
 
             # Outcome
             # Max time limit for a clean pocket
@@ -201,19 +230,27 @@ def main():
             #     outcome_heat_val *= 0.5 # half-weight for non-sacks, as quick throws indicate indirect heat
             # outcome_heat_val = np.clip(outcome_heat_val, 0, 1)
 
+            # TODO: Add penalty for # of defenders within 1-2 yards at the time of the league average timeToThrow (2.7)
+
             penalties = 0
             if passing_play['unblockedPressure']:
-                penalities += 0.2
+                print('Unblocked pressure! (10 heat val)')
+                penalties += 10
+
+            
+            # TODO: Add bonus for time over league average (2.7) while remaining in the Tackle Box
+
+            
 
 
-            # EXTREMELY CLEAN POCKET: 2022091113, 630
-            # IMMEDIATE PRESSURE FROM 1 DEFENDER: 2022091109, 1041
+            
             print('==========================================================================================')
             print(f'# OF RUSHERS ON ({game_id}, {play_id}): {len(rushing_defenders)} ({len(rushing_defenders_pressure_caused)} caused pressure) ({pc_heat_val} heat val)')
             print(f'Time to pass result: {time_to_pass_result}')
             print(f'Avg time to pressure for rushing defenders: {avg_time_to_pressure} ({ttp_heat_val} heat val)')
             print(f'Avg time to getoff for rushing defenders: {avg_time_to_getoff} ({ttg_heat_val} heat val)')
             print(f"QB time in tackle box: {passing_play['timeInTackleBox']} ({ttt_heat_val} heat val)")
+            print(f"Penalties ({penalties} heat val)")
             # print(f"Outcome: {'SACK' if not math.isnan(passing_play['timeToSack']) else 'NO SACK'} ({outcome_heat_val})")
             print(f'TOTAL HEAT VAL: {np.round(pc_heat_val + ttp_heat_val + ttg_heat_val + ttt_heat_val + penalties, 2)}')
 
