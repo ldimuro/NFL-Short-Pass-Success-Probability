@@ -126,6 +126,7 @@ def plot_frame(frame, play_data, file_name, zoom):
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
     play_state = f"{play_data['possessionTeam']} vs. {play_data['defensiveTeam']}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
+    play_state += f", rushLocationType: {play_data['rushLocationType']}, yardsGained: {play_data['yardsGained']}"
     fig.text(0.5, 0.90, play_state, ha='center', fontsize=16)
 
     ax.set_aspect('equal', adjustable='box')
