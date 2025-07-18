@@ -34,8 +34,11 @@ def main():
 
     # Obtain all play and tracking data
     all_tracking_data = get_data.get_tracking_data(year=2022, week_start=1, week_end=1)
+    all_tracking_data_2021 = get_data.get_tracking_data(year=2021, week_start=1, week_end=1)
     all_tracking_df = pd.concat(all_tracking_data, ignore_index=True)
+    all_tracking_df_2021 = pd.concat(all_tracking_data_2021, ignore_index=True)
     all_play_data = get_data.get_play_data(year=2022)
+    all_play_data_2021 = get_data.get_play_data(year=2021)
     all_player_data = get_data.get_player_data(year=2022)
     all_player_play_data = get_data.get_player_play_data(year=2022)
 
@@ -59,24 +62,44 @@ def main():
     rpo_tracking_data = data_processing.normalize_field_direction(rpo_tracking_data)
 
     # Filter to include only TRADITIONAL dropback pass plays that have at least 2 seconds of timeInTackleBox
-    passing_play_data = all_play_data[(all_play_data['passResult'].notna()) & 
-                                      (all_play_data['timeInTackleBox'] >= 2.0) &
-                                      (all_play_data['dropbackType'] == 'TRADITIONAL')]
+    # passing_play_data = all_play_data[(all_play_data['passResult'].notna()) & 
+    #                                   (all_play_data['timeInTackleBox'] >= 2.0) &
+    #                                   (all_play_data['dropbackType'] == 'TRADITIONAL')]
+    passing_play_data = all_play_data[all_play_data['passResult'].notna()]
     passing_tracking_data = data_processing.filter_tracking_data(all_tracking_data, passing_play_data)
     passing_tracking_data = data_processing.normalize_field_direction(passing_tracking_data)
+
+    # MAIN EXAMPLE: in (2021091206, 3353), 81 has a higher potential for yards, but QB throws to 28 instead
+    passing_play_data_2021 = all_play_data_2021[(all_play_data_2021['passResult'] == 'C') & (all_play_data_2021['playResult'] <= 2)]
+    passing_tracking_data_2021 = data_processing.filter_tracking_data(all_tracking_data_2021, passing_play_data_2021)
+    passing_tracking_data_2021 = data_processing.normalize_field_direction(passing_tracking_data_2021)
+
+    # Filter to include only pass plays that were thrown within 1 yards of the LoS
+    passes_behind_los_play_data = passing_play_data[(passing_play_data['passLength'] <= 1.0) & (passing_play_data['absoluteYardlineNumber'] >= 5.0)]
+    passes_behind_los_tracking_data = data_processing.filter_tracking_data(all_tracking_data, passes_behind_los_play_data)
+    passes_behind_los_tracking_data = data_processing.normalize_field_direction(passes_behind_los_tracking_data)
+
+    # passes_behind_los_play_2021_data = all_tracking_df[all_tracking_df_2021['event'] == 'play_action'][['gameId', 'playId']]
+    # play_action_play_ids = set(zip(passes_behind_los_play_2021_data['gameId'], passes_behind_los_play_2021_data['playId']))
+    # play_action_play_data = all_play_data[all_play_data.apply(lambda row: (row['gameId'], row['playId']) in play_action_play_ids, axis=1)]
+
 
 
     print('# of handoff plays:\t', len(run_play_data))
     print('# of play-action plays:\t', len(all_play_data[all_play_data['playAction'] == True]))
     print('# of RPO plays:', len(rpo_play_data))
     print('# of passing plays:', len(passing_play_data))
+    print('# of passing plays behind LoS:', len(passes_behind_los_play_data))
+    print('#\t Average EPA on passes behind LoS:' ,passes_behind_los_play_data['expectedPointsAdded'].mean())
+    print('#\t Average yardsGained on passes behind LoS:', passes_behind_los_play_data['yardsGained'].mean(), '/', passes_behind_los_play_data['yardsToGo'].mean())
+    print('# of 2021 passing plays:', len(passing_play_data_2021))
 
-    print('ALL RUSH EVENTS:', run_tracking_data[0]['event'].value_counts())
-    print('ALL RUSH O FORMATIONS:', run_play_data['offenseFormation'].value_counts())
-    print('ALL RUSH D FORMATIONS:', run_play_data['pff_passCoverage'].value_counts())
-    print('ALL RUSH rushLocationType:', run_play_data['rushLocationType'].value_counts())
-    print('ALL RUSH pff_runConceptPrimary:', run_play_data['pff_runConceptPrimary'].value_counts())
-    print('ALL RUSH pff_runConceptSecondary:', run_play_data['pff_runConceptSecondary'].value_counts())
+    # print('ALL RUSH EVENTS:', run_tracking_data[0]['event'].value_counts())
+    # print('ALL RUSH O FORMATIONS:', run_play_data['offenseFormation'].value_counts())
+    # print('ALL RUSH D FORMATIONS:', run_play_data['pff_passCoverage'].value_counts())
+    # print('ALL RUSH rushLocationType:', run_play_data['rushLocationType'].value_counts())
+    # print('ALL RUSH pff_runConceptPrimary:', run_play_data['pff_runConceptPrimary'].value_counts())
+    # print('ALL RUSH pff_runConceptSecondary:', run_play_data['pff_runConceptSecondary'].value_counts())
     # print('ALL PA EVENTS:', play_action_tracking_data[0]['event'].value_counts())
     # print('ALL PA O FORMATIONS:', play_action_play_data['offenseFormation'].value_counts())
     # print('ALL PA D FORMATIONS:', play_action_play_data['pff_passCoverage'].value_counts())
@@ -88,7 +111,7 @@ def main():
     # print('AVG timeToPressureAsPassRusher:', all_player_play_data['timeToPressureAsPassRusher'].mean())
     # print('AVG getOffTimeAsPassRusher:', all_player_play_data['getOffTimeAsPassRusher'].mean())
 
-    sample_num = 5
+    sample_num = 10
 
     if is_testing:
 
@@ -96,15 +119,21 @@ def main():
         # play_action_play_data = play_action_play_data[play_action_play_data['gameId'] <= 2022091200] # Week 1 
         # play_action_frames_dict = data_processing.get_relevant_frames(play_action_play_data.iloc[test_pa_plays], play_action_tracking_data, start_events=['line_set'], end_events=['END']) # end_events=['play_action']
 
-        test_run_plays = random.sample(range(len(run_play_data)), sample_num)
-        run_play_data = run_play_data[run_play_data['gameId'] <= 2022091200] # Week 1 only
-        run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[test_run_plays], run_tracking_data, start_events=['line_set'], end_events=['END']) # end_events=['handoff']
+        # test_run_plays = random.sample(range(len(run_play_data)), sample_num)
+        # run_play_data = run_play_data[run_play_data['gameId'] <= 2022091200] # Week 1 only
+        # run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[test_run_plays], run_tracking_data, start_events=['line_set'], end_events=['END']) # end_events=['handoff']
 
         # rpo_play_data = rpo_play_data[rpo_play_data['gameId'] <= 2022091200] # Week 1 only
         # test_rpo_plays = random.sample(range(len(rpo_play_data)), sample_num)
         # rpo_frames_dict = data_processing.get_relevant_frames(rpo_play_data.iloc[test_rpo_plays], rpo_tracking_data, start_events=['line_set'], end_events=['END'])
 
+        passes_behind_los_play_data = passes_behind_los_play_data[passes_behind_los_play_data['gameId'] <= 2022091200] # Week 1 only
+        test_passes_behind_los_plays = random.sample(range(len(passes_behind_los_play_data)), sample_num)
+        passes_behind_los_frames_dict = data_processing.get_relevant_frames(passes_behind_los_play_data.iloc[test_passes_behind_los_plays], passes_behind_los_tracking_data, start_events=['line_set'], end_events=['END'])
 
+        passing_play_data_2021 = passing_play_data_2021[(passing_play_data_2021['gameId'] <= 2021091300)] # Week 1 only
+        test_pass_plays_2021 = random.sample(range(len(passing_play_data_2021)), sample_num)
+        passes_2021_dict = data_processing.get_relevant_frames(passing_play_data_2021.iloc[test_pass_plays_2021], all_tracking_data_2021, start_events=['ball_snap'], end_events=['END'])
 
 
 
@@ -153,10 +182,23 @@ def main():
     #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_pa_norm', loop=False, zoom=False)
 
     # Create GIFs for run plays
-    for play,play_frames in run_frames_dict.items():
+    # for play,play_frames in run_frames_dict.items():
+    #     game_id, play_id = play
+    #     play_data = run_play_data[(run_play_data['gameId'] == game_id) & (run_play_data['playId'] == play_id)].iloc[0]
+    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_run_norm', loop=False, zoom=False)
+
+    # Create GIFs for passes plays behind the LoS
+    # for play,play_frames in passes_behind_los_frames_dict.items():
+    #     game_id, play_id = play
+    #     play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
+    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm', loop=False, zoom=False)
+
+    # Create GIFs for 2021 passes
+    for play,play_frames in passes_2021_dict.items():
         game_id, play_id = play
-        play_data = run_play_data[(run_play_data['gameId'] == game_id) & (run_play_data['playId'] == play_id)].iloc[0]
-        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_run_norm', loop=False, zoom=False)
+        play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
+        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_2021_norm_short', loop=False, zoom=False)
+
 
 
 

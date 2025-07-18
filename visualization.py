@@ -9,7 +9,7 @@ import shutil
 def plot_frame(frame, play_data, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
 
-    ball = frame[frame['displayName'] == 'football'].iloc[0]
+    ball = frame[frame['club'] == 'football'].iloc[0]
     ball_x = ball['x']
     ball_y = ball['y']
 
@@ -99,11 +99,11 @@ def plot_frame(frame, play_data, file_name, zoom):
     color_map = {teams[0]: team_colors[teams[0]], teams[1]: team_colors[teams[1]], 'football': '#dec000'}
 
     # Add ball
-    football = frame[frame['displayName'] == 'football']
+    football = frame[frame['club'] == 'football']
     ax.scatter(football['x'], football['y'], c='#dec000', s=500 if zoom else 25, marker='o',zorder=3.1)
 
     # Add players
-    players = frame[frame['displayName'] != 'football']
+    players = frame[frame['club'] != 'football']
     ax.scatter(players['x'], players['y'], c=players['club'].map(color_map), s=1000 if zoom else 60, zorder=3)
 
     # Add jersey numbers
@@ -126,7 +126,7 @@ def plot_frame(frame, play_data, file_name, zoom):
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
     play_state = f"{play_data['possessionTeam']} vs. {play_data['defensiveTeam']}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
-    play_state += f", rushLocationType: {play_data['rushLocationType']}, yardsGained: {play_data['yardsGained']}"
+    play_state += f", yardsGained: {play_data['playResult'] if '2021' in str(play_data['gameId']) else play_data['yardsGained']}"
     fig.text(0.5, 0.90, play_state, ha='center', fontsize=16)
 
     ax.set_aspect('equal', adjustable='box')
