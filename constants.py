@@ -6,3 +6,10 @@ DEF_GOALLINE = 110.0
 SIDELINE_TO_HASH = 23.58
 
 AVG_TIME_TO_THROW = 2.75
+
+# Frame Events
+START = 'START'
+END = 'END'
+LINE_SET = 'line_set'
+BALL_SNAP = 'ball_snap'
+PASS_FORWARD = 'pass_forward'
