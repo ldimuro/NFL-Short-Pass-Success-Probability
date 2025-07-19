@@ -78,7 +78,9 @@ def main():
 
     # Filter to include only pass plays that were thrown within 1 yards of the LoS
     passes_behind_los_play_data = passing_play_data[(passing_play_data['passResult'] == 'C') & 
-                                                    (passing_play_data['passLength'] <= 1)]# &
+                                                    (passing_play_data['passLength'] <= 2) &
+                                                    (passing_play_data['passTippedAtLine'] == False) &
+                                                    (passing_play_data['playNullifiedByPenalty'] == 'N')]# &
                                                     # (passing_play_data['targetY'] >= constants.SIDELINE_TO_HASH / 2) &
                                                     # (passing_play_data['targetY'] < constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH / 2)]
     passes_behind_los_tracking_data = data_processing.filter_tracking_data(all_tracking_data, passes_behind_los_play_data)
@@ -96,9 +98,14 @@ def main():
     print('# of passing plays:', len(passing_play_data))
     print('# of passing plays behind LoS:', len(passes_behind_los_play_data))
     print('#\t Average EPA on passes behind LoS:' ,passes_behind_los_play_data['expectedPointsAdded'].mean())
-    print('#\t Average yardsGained on passes behind LoS:', passes_behind_los_play_data['yardsGained'].mean(), '/', passes_behind_los_play_data['yardsToGo'].mean())
+
+    median_yardsGained_yardsToGo_ratio = (passes_behind_los_play_data['yardsGained'] / passes_behind_los_play_data['yardsToGo']).median()
+    plays_above_yardsGained_yardsToGo_ratio = passes_behind_los_play_data[(passes_behind_los_play_data['yardsGained']/passes_behind_los_play_data['yardsToGo']) >= median_yardsGained_yardsToGo_ratio]
+    print('#\t Mean yardsGained/yardsToGo ratio on passes behind LoS:', median_yardsGained_yardsToGo_ratio)
+    print('#\t Percent of behind LoS passes >= median_yardsGained_yardsToGo_ratio:', len(plays_above_yardsGained_yardsToGo_ratio) / len(passes_behind_los_play_data))
+    print('#\t Max yardsGained on passes behind LoS:', passes_behind_los_play_data['yardsGained'].max())
     print('# of 2021 passing plays:', len(all_play_data_2021))
-    print('# of 2021 completed passing plays:', len(passing_play_data_2021))
+    # print('# of 2021 completed passing plays:', len(passing_play_data_2021))
 
     # print('ALL RUSH EVENTS:', run_tracking_data[0]['event'].value_counts())
     # print('ALL RUSH O FORMATIONS:', run_play_data['offenseFormation'].value_counts())
@@ -135,7 +142,7 @@ def main():
 
         passes_behind_los_play_data = passes_behind_los_play_data[passes_behind_los_play_data['gameId'] <= 2022091200] # Week 1 only
         test_passes_behind_los_plays = random.sample(range(len(passes_behind_los_play_data)), sample_num)
-        passes_behind_los_frames_dict = data_processing.get_relevant_frames(passes_behind_los_play_data.iloc[test_passes_behind_los_plays], passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.END])
+        passes_behind_los_frames_dict = data_processing.get_relevant_frames(passes_behind_los_play_data.iloc[test_passes_behind_los_plays], passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
 
         passing_play_data_2021 = passing_play_data_2021[(passing_play_data_2021['gameId'] <= 2021091300)] # Week 1 only
         test_pass_plays_2021 = random.sample(range(len(passing_play_data_2021)), sample_num)
