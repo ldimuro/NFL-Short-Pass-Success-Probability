@@ -92,6 +92,42 @@ def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_e
             print(f'🚨could not find {game_id} - {play_id}')
 
     return play_tracking_dict
+
+
+# Input: 11 offensive players at the moment of pass_forward, Output: player in the path of the ball trajectory
+def detect_intended_receiver():
+    pass
+
+
+# Input: play data, Output: (gameId, playId), Success=1/Failure=0
+def estimate_play_success(play_data: DataFrame, year):
+    play_success_labels = {}
+    for i,play in play_data.iterrows():
+        game_id = play['gameId']
+        play_id = play['playId']
+        down = play['down']
+
+        yards_to_go = play['yardsToGo']
+        yards_gained = play['playResult' if year == 2021 else 'yardsGained']
+        yards_ratio = yards_gained / yards_to_go
+
+        # Play succeeds if:
+        #   40% of yardsToGo gained on 1st down
+        #   60% of yardsToGo gained on 2nd down
+        #   100% of yardsToGo gained on 3rd/4th down
+        if down == 1:
+            is_success = True if yards_ratio >= 0.4 else False
+        elif down == 2:
+            is_success = True if yards_ratio >= 0.6 else False
+        else:
+            is_success = True if yards_ratio >= 1.0 else False
+        
+        play_success_labels[(game_id, play_id)] = is_success
+
+    return play_success_labels
+
+
+
     
 
 

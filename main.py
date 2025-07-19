@@ -86,6 +86,7 @@ def main():
                                                     # (passing_play_data['targetY'] < constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH / 2)]
     passes_behind_los_tracking_data = data_processing.filter_tracking_data(all_tracking_data, passes_behind_los_play_data)
     passes_behind_los_tracking_data = data_processing.normalize_field_direction(passes_behind_los_tracking_data)
+    
 
     # passes_behind_los_play_2021_data = all_tracking_df[all_tracking_df_2021['event'] == 'play_action'][['gameId', 'playId']]
     # play_action_play_ids = set(zip(passes_behind_los_play_2021_data['gameId'], passes_behind_los_play_2021_data['playId']))
@@ -125,54 +126,89 @@ def main():
     # print('AVG timeToPressureAsPassRusher:', all_player_play_data['timeToPressureAsPassRusher'].mean())
     # print('AVG getOffTimeAsPassRusher:', all_player_play_data['getOffTimeAsPassRusher'].mean())
 
-    sample_num = 5
+    sample_num = 1
 
-    if is_testing:
+    # test_pa_plays = random.sample(range(len(play_action_play_data)), sample_num)
+    # play_action_play_data = play_action_play_data[play_action_play_data['gameId'] <= 2022091200] # Week 1 
+    # play_action_frames_dict = data_processing.get_relevant_frames(play_action_play_data.iloc[test_pa_plays], play_action_tracking_data, start_events=['line_set'], end_events=['END']) # end_events=['play_action']
 
-        # test_pa_plays = random.sample(range(len(play_action_play_data)), sample_num)
-        # play_action_play_data = play_action_play_data[play_action_play_data['gameId'] <= 2022091200] # Week 1 
-        # play_action_frames_dict = data_processing.get_relevant_frames(play_action_play_data.iloc[test_pa_plays], play_action_tracking_data, start_events=['line_set'], end_events=['END']) # end_events=['play_action']
+    # test_run_plays = random.sample(range(len(run_play_data)), sample_num)
+    # run_play_data = run_play_data[run_play_data['gameId'] <= 2022091200] # Week 1 only
+    # run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[test_run_plays], run_tracking_data, start_events=['line_set'], end_events=['END']) # end_events=['handoff']
 
-        # test_run_plays = random.sample(range(len(run_play_data)), sample_num)
-        # run_play_data = run_play_data[run_play_data['gameId'] <= 2022091200] # Week 1 only
-        # run_frames_dict = data_processing.get_relevant_frames(run_play_data.iloc[test_run_plays], run_tracking_data, start_events=['line_set'], end_events=['END']) # end_events=['handoff']
+    # rpo_play_data = rpo_play_data[rpo_play_data['gameId'] <= 2022091200] # Week 1 only
+    # test_rpo_plays = random.sample(range(len(rpo_play_data)), sample_num)
+    # rpo_frames_dict = data_processing.get_relevant_frames(rpo_play_data.iloc[test_rpo_plays], rpo_tracking_data, start_events=['line_set'], end_events=['END'])
 
-        # rpo_play_data = rpo_play_data[rpo_play_data['gameId'] <= 2022091200] # Week 1 only
-        # test_rpo_plays = random.sample(range(len(rpo_play_data)), sample_num)
-        # rpo_frames_dict = data_processing.get_relevant_frames(rpo_play_data.iloc[test_rpo_plays], rpo_tracking_data, start_events=['line_set'], end_events=['END'])
+    passes_behind_los_play_data = passes_behind_los_play_data[passes_behind_los_play_data['gameId'] <= 2022091200] # Week 1 only
+    test_passes_behind_los_plays = random.sample(range(len(passes_behind_los_play_data)), sample_num)
+    passes_behind_los_frames_dict = data_processing.get_relevant_frames(passes_behind_los_play_data.iloc[test_passes_behind_los_plays], passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
 
-        passes_behind_los_play_data = passes_behind_los_play_data[passes_behind_los_play_data['gameId'] <= 2022091200] # Week 1 only
-        test_passes_behind_los_plays = random.sample(range(len(passes_behind_los_play_data)), sample_num)
-        passes_behind_los_frames_dict = data_processing.get_relevant_frames(passes_behind_los_play_data.iloc[test_passes_behind_los_plays], passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
-
-        passing_play_data_2021 = passing_play_data_2021[(passing_play_data_2021['gameId'] <= 2021091300)] # Week 1 only
-        test_pass_plays_2021 = random.sample(range(len(passing_play_data_2021)), sample_num)
-        passes_2021_dict = data_processing.get_relevant_frames(passing_play_data_2021.iloc[test_pass_plays_2021], all_tracking_data_2021, start_events=[constants.BALL_SNAP], end_events=[constants.END])
+    passing_play_data_2021 = passing_play_data_2021[(passing_play_data_2021['gameId'] <= 2021091300)] # Week 1 only
+    test_pass_plays_2021 = random.sample(range(len(passing_play_data_2021)), sample_num)
+    passes_2021_dict = data_processing.get_relevant_frames(passing_play_data_2021.iloc[test_pass_plays_2021], all_tracking_data_2021, start_events=[constants.BALL_SNAP], end_events=[constants.END])
 
 
 
 
 
-        # passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200] # Week 1 only
+    # passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200] # Week 1 only
 
-        # random_tests = random.sample(range(len(passing_play_data)), sample_num)
-        # random_test_passing_plays = passing_play_data.iloc[random_tests]
-        # use_cases = [(2022091101, 1879), (2022091109, 1041), (2022091108, 614), (2022091101, 1492), (2022091101, 1166),
-        #             (2022091105, 2817), (2022091108, 2799), (2022091107, 1642), (2022091106, 3050), (2022091111, 336),
-        #             (2022091105, 2817), (2022091104, 2952)]
+    # random_tests = random.sample(range(len(passing_play_data)), sample_num)
+    # random_test_passing_plays = passing_play_data.iloc[random_tests]
+    # use_cases = [(2022091101, 1879), (2022091109, 1041), (2022091108, 614), (2022091101, 1492), (2022091101, 1166),
+    #             (2022091105, 2817), (2022091108, 2799), (2022091107, 1642), (2022091106, 3050), (2022091111, 336),
+    #             (2022091105, 2817), (2022091104, 2952)]
 
-        # # Filter all passing_play_data to use_cases
-        # test_case_set = set(use_cases)
-        # use_case_plays = passing_play_data[
-        #     passing_play_data.apply(lambda row: (row['gameId'], row['playId']) in test_case_set, axis=1)
-        # ]
+    # # Filter all passing_play_data to use_cases
+    # test_case_set = set(use_cases)
+    # use_case_plays = passing_play_data[
+    #     passing_play_data.apply(lambda row: (row['gameId'], row['playId']) in test_case_set, axis=1)
+    # ]
 
-        # plays_to_process = pd.concat([random_test_passing_plays, use_case_plays], ignore_index=True)
-        
-        # # Create GIFs of 1 randomly selected play
-        # play_to_gif = random_test_passing_plays
-        # passing_frames_dict = data_processing.get_relevant_frames(play_to_gif, passing_tracking_data, start_events=['line_set'], end_events=['END'])
+    # plays_to_process = pd.concat([random_test_passing_plays, use_case_plays], ignore_index=True)
+    
+    # # Create GIFs of 1 randomly selected play
+    # play_to_gif = random_test_passing_plays
+    # passing_frames_dict = data_processing.get_relevant_frames(play_to_gif, passing_tracking_data, start_events=['line_set'], end_events=['END'])
 
+
+
+    # Calculate label for each play
+    passes_behind_los_success_labels = data_processing.estimate_play_success(passes_behind_los_play_data, 2022)
+
+
+    passes_behind_los_tracking_data = pd.concat(passes_behind_los_tracking_data, ignore_index=True)
+    for i,play in passes_behind_los_play_data[5:10].iterrows():
+        game_id = play['gameId']
+        play_id = play['playId']
+        possession_team = play['possessionTeam']
+
+        play_df = passes_behind_los_tracking_data[(passes_behind_los_tracking_data['gameId'] == game_id) & (passes_behind_los_tracking_data['playId'] == play_id)]
+
+        # Get the frameId of the 'pass_forward' event
+        pass_forward_frame_id = play_df[play_df['event'] == 'pass_forward']['frameId'].min()
+        target_frame_id = pass_forward_frame_id + 3
+
+        # Get ball trajectory data as the pass is thrown (use a few frames ahead to calculate direction)
+        ball_frame0 = play_df[(play_df['frameId'] == pass_forward_frame_id) & (play_df['club'] == 'football')].iloc[0]
+        ball_frame1 = play_df[(play_df['frameId'] == target_frame_id) & (play_df['club'] == 'football')].iloc[0]
+        ball_x0, ball_y0 = ball_frame0['x'], ball_frame0['y']
+        ball_x1, ball_y1 = ball_frame1['x'], ball_frame1['y']
+        ball_direction_vector = np.array([ball_x1 - ball_x0, ball_y1 - ball_y0])
+        ball_dx, ball_dy = ball_direction_vector / (np.linalg.norm(ball_direction_vector) + 1e-6)
+        theta_rad = np.arctan2(ball_dx, ball_dy) # convert to radians
+        ball_dir_angle = (np.rad2deg(theta_rad) + 360) % 360 # convert to degrees 0-360
+
+        ball_data = {
+            'x': ball_frame0['x'],
+            'y': ball_frame0['y'],
+            'dir': ball_dir_angle
+        }
+
+        offense_players = play_df[(play_df['frameId'] == target_frame_id) & (play_df['club'] == possession_team)]
+
+        print(f"{game_id},{play_id} - ball data: {ball_data}\noffensive players:\n{offense_players}")
         
 
 
@@ -202,10 +238,10 @@ def main():
     #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_run_norm', loop=False, zoom=False)
 
     # Create GIFs for passes plays behind the LoS
-    for play,play_frames in passes_behind_los_frames_dict.items():
-        game_id, play_id = play
-        play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
-        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm', loop=False, zoom=False)
+    # for play,play_frames in passes_behind_los_frames_dict.items():
+    #     game_id, play_id = play
+    #     play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
+    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm', loop=False, zoom=False)
 
     # Create GIFs for 2021 passes
     # for play,play_frames in passes_2021_dict.items():
