@@ -71,6 +71,7 @@ def main():
     passing_tracking_data = data_processing.normalize_field_direction(passing_tracking_data)
 
     # MAIN EXAMPLE: in (2021091206, 3353), 81 has a higher potential for yards, but QB throws to 28 instead
+    # (2022091104, 3956): Goff could've passed it to 14 earlier and gotten a much larger gain
     # Good example (2022091104, 3204), (2022091100, 458), (2022091105, 4905), (2022091109, 743), (2022091112, 917)
     passing_play_data_2021 = all_play_data_2021[(all_play_data_2021['passResult'] == 'C')]# & (all_play_data_2021['playResult'] <= 3)]
     passing_tracking_data_2021 = data_processing.filter_tracking_data(all_tracking_data_2021, passing_play_data_2021)
