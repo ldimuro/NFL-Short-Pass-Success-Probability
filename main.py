@@ -175,41 +175,18 @@ def main():
 
 
     # Calculate label for each play
-    passes_behind_los_success_labels = data_processing.estimate_play_success(passes_behind_los_play_data, 2022)
+    passes_behind_los_success_labels = data_processing.estimate_play_success(passes_behind_los_play_data, year=2022)
 
-
+    # For each play, determine the most likely receiver of the pass_forward, and their location
+    # Use this location and location of ball at ball_snap to determine which passes are near or behind the LoS
     passes_behind_los_tracking_data = pd.concat(passes_behind_los_tracking_data, ignore_index=True)
-    for i,play in passes_behind_los_play_data[5:10].iterrows():
-        game_id = play['gameId']
-        play_id = play['playId']
-        possession_team = play['possessionTeam']
+    for i,play in passes_behind_los_play_data[10:20].iterrows():
+        intended_player_id, intended_player_coord = data_processing.detect_intended_receiver(play, passes_behind_los_tracking_data, all_player_data)
+        print('\n', play['playDescription'])
+        print('INTENDED PLAYER:', all_player_data[all_player_data['nflId'] == intended_player_id].iloc[0]['displayName'], intended_player_coord)
 
-        play_df = passes_behind_los_tracking_data[(passes_behind_los_tracking_data['gameId'] == game_id) & (passes_behind_los_tracking_data['playId'] == play_id)]
 
-        # Get the frameId of the 'pass_forward' event
-        pass_forward_frame_id = play_df[play_df['event'] == 'pass_forward']['frameId'].min()
-        target_frame_id = pass_forward_frame_id + 3
 
-        # Get ball trajectory data as the pass is thrown (use a few frames ahead to calculate direction)
-        ball_frame0 = play_df[(play_df['frameId'] == pass_forward_frame_id) & (play_df['club'] == 'football')].iloc[0]
-        ball_frame1 = play_df[(play_df['frameId'] == target_frame_id) & (play_df['club'] == 'football')].iloc[0]
-        ball_x0, ball_y0 = ball_frame0['x'], ball_frame0['y']
-        ball_x1, ball_y1 = ball_frame1['x'], ball_frame1['y']
-        ball_direction_vector = np.array([ball_x1 - ball_x0, ball_y1 - ball_y0])
-        ball_dx, ball_dy = ball_direction_vector / (np.linalg.norm(ball_direction_vector) + 1e-6)
-        theta_rad = np.arctan2(ball_dx, ball_dy) # convert to radians
-        ball_dir_angle = (np.rad2deg(theta_rad) + 360) % 360 # convert to degrees 0-360
-
-        ball_data = {
-            'x': ball_frame0['x'],
-            'y': ball_frame0['y'],
-            'dir': ball_dir_angle
-        }
-
-        offense_players = play_df[(play_df['frameId'] == target_frame_id) & (play_df['club'] == possession_team)]
-
-        print(f"{game_id},{play_id} - ball data: {ball_data}\noffensive players:\n{offense_players}")
-        
 
 
 
