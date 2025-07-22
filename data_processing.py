@@ -3,6 +3,7 @@ from pandas import DataFrame
 import numpy as np
 import constants
 import math
+import re
 
 
 def filter_tracking_data(tracking_data, passing_play_data):
@@ -95,93 +96,65 @@ def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_e
 
 
 
+# Extract first name initial(s) and last name from playDescription
+# Can handle cases such as "H.Henry", "Mi.Carter", and "A.St. Brown"
+def extract_first_and_last_name(description):
+    """
+    Extracts first name initial(s) and last name from a play description.
+    Returns a tuple: (initials, last_name), or (None, None) if not matched.
+    """
+    match = re.search(r'\bto\s+([A-Z][a-z]?)\.([A-Z][a-z]*(?:\.?\s?[A-Z][a-z]*)*)', description)
+    if match:
+        initials = match.group(1).strip()
+        last_name = match.group(2).strip()
+        return initials, last_name
+    return None, None
 
-def detect_intended_receiver(play: DataFrame, tracking_data: DataFrame, player_data: DataFrame):
-    game_id = play['gameId']
-    play_id = play['playId']
-    possession_team = play['possessionTeam']
 
+def get_receiver_nflId(row, player_data: DataFrame, tracking_data: DataFrame):
+    first_initial = row['receiver_first_initial']
+    last_name = row['receiver_last_name']
+    team = row['possessionTeam']
+    game_id = row['gameId']
+    play_id = row['playId']
+
+    if pd.isnull(last_name):
+        return None, None
+    
+    # Find frameId at the moment of the pass
     play_df = tracking_data[(tracking_data['gameId'] == game_id) & (tracking_data['playId'] == play_id)]
+    pass_forward_frame_id = play_df[play_df['event'].isin(['pass_forward', 'autoevent_passforward'])]['frameId'].min()
 
-    # USE BALL COORDS AT 'pass_forward' AND A FEW FRAMES LATER TO DETERMINE BALL TRAJECTORY
-    #########################################################################################
+    # Get the spatiotemportal data of all 22 players at the moment of the pass
+    all_22_tracking_features = play_df[play_df['frameId'] == pass_forward_frame_id]
 
-    # Get the frameId of the 'pass_forward' event
-    pass_forward_frame_id = play_df[play_df['event'] == 'pass_forward']['frameId'].min()
-    target_frame_id = pass_forward_frame_id + 3
+    # Find player with a matching first initial and last name (case-insensitive)
+    matches = player_data[
+        (player_data['displayName'].str.startswith(first_initial)) &
+        (player_data['displayName'].str.contains(fr'\b{re.escape(last_name)}\b', case=False, na=False))
+    ]
 
-    # Get ball trajectory data as the pass is thrown (use a few frames ahead to calculate direction)
-    ball_frame0 = play_df[(play_df['frameId'] == pass_forward_frame_id) & (play_df['club'] == 'football')].iloc[0]
-    ball_frame1 = play_df[(play_df['frameId'] == target_frame_id) & (play_df['club'] == 'football')].iloc[0]
-    ball_x0, ball_y0 = ball_frame0['x'], ball_frame0['y']
-    ball_x1, ball_y1 = ball_frame1['x'], ball_frame1['y']
-    ball_dir_vector = np.array([ball_x1 - ball_x0, ball_y1 - ball_y0])
-    ball_dir_unit = ball_dir_vector / (np.linalg.norm(ball_dir_vector) + 1e-6)
+    receiver_id = None
+    if not matches.empty and len(matches) == 1: # 1 existing player with first initial and last name
+        receiver_id = matches.iloc[0]['nflId']
+    elif not matches.empty and len(matches) > 1: # more than 1 existing player with first initial and last name
 
-    # Convert to 360 angle direction
-    ball_dx, ball_dy = ball_dir_unit
-    theta_rad = np.arctan2(ball_dx, ball_dy) # convert to radians
-    ball_dir_angle = (np.rad2deg(theta_rad) + 360) % 360 # convert to degrees 0-360
+        # Filter to only include players on offense who could receive the ball
+        eligible_positions = ['WR', 'TE', 'RB', 'FB']
+        skill_players_df = player_data[player_data['position'].isin(eligible_positions)]
+        merged_df = play_df.merge(skill_players_df[['nflId', 'position']], on='nflId', how='left')
+        possible_targets_df = merged_df[merged_df['position'].isin(eligible_positions)]
+        possible_targets_df = possible_targets_df[(possible_targets_df['frameId'] == pass_forward_frame_id) & (possible_targets_df['club'] == team)]
 
-    ball_at_pass_data = {
-        'x': ball_frame0['x'],
-        'y': ball_frame0['y'],
-        'dir_angle': ball_dir_angle,
-        'dir_unit': ball_dir_unit,
-        'dir_vector': ball_dir_vector
-    }
+        # Check for matches in this small subset, instead of all_players
+        matches_in_possible_targets = matches[matches['nflId'].isin(possible_targets_df['nflId'])]['nflId'].values
 
-    # USE BALL TRAJECTORY TO ESTIMATE THE MOST LIKELY RECEIVER AND THEIR LOCATION
-    #########################################################################################
+        if len(matches_in_possible_targets) == 1:
+            receiver_id = matches_in_possible_targets[0]
 
-    # Use player and play data to filter tracking data to only include offensive players who can receive the ball (at the pass_forward frame)
-    eligible_positions = ['WR', 'TE', 'RB', 'FB']
-    skill_players_df = player_data[player_data['position'].isin(eligible_positions)]
-    merged_df = play_df.merge(skill_players_df[['nflId', 'position']], on='nflId', how='left')
-    possible_targets_df = merged_df[merged_df['position'].isin(eligible_positions)]
-    possible_targets_df = possible_targets_df[(possible_targets_df['frameId'] == target_frame_id) & (possible_targets_df['club'] == possession_team)]
-
-    best_score = float('inf')
-    best_player_id = None
-    best_player_coord = None
-
-    for i,player in possible_targets_df.iterrows():
-        # Vector from the ball to the player
-        to_player_vector = np.array([player['x'] - ball_at_pass_data['x'], player['y'] - ball_at_pass_data['y']])
-
-        # Normalize that vector to get direction only
-        to_player_unit = to_player_vector / (np.linalg.norm(to_player_vector) + 1e-6)
-
-        # Distance from the ball to the player
-        player_distance_from_qb = np.linalg.norm(to_player_vector)
-
-        # Total distance the ball is expected to travel
-        ball_travel_distance = np.linalg.norm(ball_at_pass_data['dir_vector'])
-
-        # Apply a penalty if the player is closer than 75% of the ball's travel distance
-        # (e.g. the ball is likely going past this player)
-        if player_distance_from_qb < 0.75 * ball_travel_distance:
-            penalty = 0.5
-        else:
-            penalty = 0.0
-
-        # Cosine similarity between ball direction and player vector
-        angle_cos = np.dot(ball_at_pass_data['dir_unit'], to_player_unit)
-
-        # Combined score: angle misalignment + distance weight + penalty
-        score = (1 - angle_cos) + 0.01 * player_distance_from_qb + penalty
-
-        if score < best_score:
-            best_score = score
-            best_player_id = player['nflId']
-            best_player_coord = (player['x'], player['y'])
-
-    
-    return best_player_id, best_player_coord
+    return receiver_id, all_22_tracking_features
 
 
-
-    
 
 
 # Input: play data, Output: (gameId, playId), Success=1/Failure=0

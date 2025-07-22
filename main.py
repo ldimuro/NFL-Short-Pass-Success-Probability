@@ -17,6 +17,7 @@ import visualization
 import random
 import math
 import constants
+import pickle
 
 
 def set_seed(seed_value=42):
@@ -41,6 +42,7 @@ def main():
     all_play_data = get_data.get_play_data(year=2022)
     all_play_data_2021 = get_data.get_play_data(year=2021)
     all_player_data = get_data.get_player_data(year=2022)
+    all_player_data_2021 = get_data.get_player_data(year=2021)
     all_player_play_data = get_data.get_player_play_data(year=2022)
 
     # Filter to include only plays that contain a 'handoff' event
@@ -73,7 +75,8 @@ def main():
     # MAIN EXAMPLE: in (2021091206, 3353), 81 has a higher potential for yards, but QB throws to 28 instead
     # (2022091104, 3956): Goff could've passed it to 14 earlier and gotten a much larger gain
     # Good example (2022091104, 3204), (2022091100, 458), (2022091105, 4905), (2022091109, 743), (2022091112, 917)
-    passing_play_data_2021 = all_play_data_2021[(all_play_data_2021['passResult'] == 'C')]# & (all_play_data_2021['playResult'] <= 3)]
+    passing_play_data_2021 = all_play_data_2021[(all_play_data_2021['passResult'] == 'C') &
+                                                (all_play_data_2021['playDescription'].str.contains('short', case=False, na=False))]# & (all_play_data_2021['playResult'] <= 3)]
     passing_tracking_data_2021 = data_processing.filter_tracking_data(all_tracking_data_2021, passing_play_data_2021)
     passing_tracking_data_2021 = data_processing.normalize_field_direction(passing_tracking_data_2021)
 
@@ -177,14 +180,41 @@ def main():
     # Calculate label for each play
     passes_behind_los_success_labels = data_processing.estimate_play_success(passes_behind_los_play_data, year=2022)
 
-    # For each play, determine the most likely receiver of the pass_forward, and their location
-    # Use this location and location of ball at ball_snap to determine which passes are near or behind the LoS
+    
     passes_behind_los_tracking_data = pd.concat(passes_behind_los_tracking_data, ignore_index=True)
-    for i,play in passes_behind_los_play_data[10:20].iterrows():
-        intended_player_id, intended_player_coord = data_processing.detect_intended_receiver(play, passes_behind_los_tracking_data, all_player_data)
-        print('\n', play['playDescription'])
-        print('INTENDED PLAYER:', all_player_data[all_player_data['nflId'] == intended_player_id].iloc[0]['displayName'], intended_player_coord)
+    passing_tracking_data_2021 = pd.concat(passing_tracking_data_2021, ignore_index=True)
+    print('analyzing intended receivers')
 
+    # Extract first and last name of receiver of a play in the playDescription and create 2 new columns for the name
+    passing_play_data_2021[['receiver_first_initial', 'receiver_last_name']] = passing_play_data_2021['playDescription'].apply(lambda desc: pd.Series(data_processing.extract_first_and_last_name(desc)))
+
+    # For each passing play:
+    # 1) use first and last name to obtain the nflId of the receiver
+    # 2) extract the tracking data at the moment of the pass for all 22 players on the field
+    # 3) store the receiver_id and tracking data in a dictionary (with (gameId, playId) as the key)
+    behind_los_pass_plays_2021 = {}
+    for i,play in passing_play_data_2021.iterrows():
+        game_id = play['gameId']
+        play_id = play['playId']
+        play_df = passing_tracking_data_2021[(passing_tracking_data_2021['gameId'] == game_id) & (passing_tracking_data_2021['playId'] == play_id)]
+        los = np.round(play_df.iloc[0]['x'])
+        receiver_id, all_22_tracking_features = data_processing.get_receiver_nflId(play, all_player_data_2021, passing_tracking_data_2021)
+
+        # print(f"\t{receiver_id} {all_player_data_2021[all_player_data_2021['nflId'] == receiver_id]['displayName']}\n{all_22_tracking_features}")
+
+        # receiver_id = None indicates pre-processing issue, so just skip
+        if receiver_id != None:
+            receiver_x_at_pass = np.round(all_22_tracking_features[all_22_tracking_features['nflId'] == receiver_id].iloc[0]['x'])
+
+            # Only store plays in which the receiver is at or behind the LoS at the moment of the pass
+            if receiver_x_at_pass - los <= 0:
+                print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['prePenaltyPlayResult']}")
+                behind_los_pass_plays_2021[(game_id, play_id)] = {'receiver_id': receiver_id, 'tracking_data': all_22_tracking_features}
+
+    print(f'PLAYS EXTRACTED {len(behind_los_pass_plays_2021)}/{len(passing_play_data_2021)}')
+
+    with open('2021_behind_los_plays.pkl', 'wb') as f:
+        pickle.dump(behind_los_pass_plays_2021, f)
 
 
 
