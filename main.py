@@ -154,7 +154,7 @@ def main():
 
     print(f'PLAYS EXTRACTED {len(behind_los_pass_plays_2021)}/{len(passing_play_data_2021)}')
 
-    with open('2021_behind_los_plays.pkl', 'wb') as f:
+    with open('2021_behind_los_plays_weeks1-8.pkl', 'wb') as f:
         pickle.dump(behind_los_pass_plays_2021, f)
 
 
