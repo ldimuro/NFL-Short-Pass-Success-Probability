@@ -263,6 +263,9 @@ def create_input_tensor(play, play_data, player_data):
     print('receiver:', play_data['receiver_id'])
     print(play_data)
 
+    down = play_data['down']
+    down_norm = down / 4.0
+
     players_on_field = play_data['tracking_data']
     players_on_field = players_on_field[players_on_field['nflId'].notna()] # remove 'football' from tracking_data
 
@@ -285,23 +288,23 @@ def create_input_tensor(play, play_data, player_data):
     print(f'def_players ({len(def_players)}):\n', def_players)
 
     # Get velocity of every player (including the receiver)
-    player_velocities = {}
+    player_vel = {}
     for i,player in players_on_field.iterrows():
         player_nflId = player['nflId']
         player_speed = player['dis'] * 10 #player['s']
         player_dir = np.deg2rad(player['dir']) # TODO: Is this right?
-        player_v_x = player_speed * np.cos(player_dir) # TODO: is it x=cos, y=sin, or vice versa?
-        player_v_y = player_speed * np.sin(player_dir)
+        player_v_x = player_speed * np.sin(player_dir) # TODO: is it x=cos, y=sin, or vice versa?
+        player_v_y = player_speed * np.cos(player_dir)
 
-        player_velocities[player_nflId] = (player_v_x, player_v_y)
+        player_vel[player_nflId] = (player_v_x, player_v_y)
 
     # Calculate relative positions and speeds of every defender to receiver
     def_rel_pos = {}
     def_rel_vel = {}
     for i,defender in def_players.iterrows():
         rel_pos = (defender['x'] - receiver['x'], defender['y'] - receiver['y'])
-        rel_vel = (player_velocities[defender['nflId']][0] - player_velocities[receiver_id][0], 
-                     player_velocities[defender['nflId']][1] - player_velocities[receiver_id][1])
+        rel_vel = (player_vel[defender['nflId']][0] - player_vel[receiver_id][0], 
+                     player_vel[defender['nflId']][1] - player_vel[receiver_id][1])
 
         def_rel_pos[defender['nflId']] = rel_pos
         def_rel_vel[defender['nflId']] = rel_vel
@@ -312,15 +315,25 @@ def create_input_tensor(play, play_data, player_data):
     off_def_pair_vel = {}
     for off_player, def_player in product(off_players.itertuples(index=False), def_players.itertuples(index=False)):
         diff_pos = (off_player.x - def_player.x, off_player.y - def_player.y)
-        diff_vel = (player_velocities[off_player.nflId][0] - player_velocities[def_player.nflId][0], 
-                     player_velocities[off_player.nflId][1] - player_velocities[def_player.nflId][1])
+        diff_vel = (player_vel[off_player.nflId][0] - player_vel[def_player.nflId][0], 
+                     player_vel[off_player.nflId][1] - player_vel[def_player.nflId][1])
         
         off_def_pair_pos[(off_player.nflId, def_player.nflId)] = diff_pos
         off_def_pair_vel[(off_player.nflId, def_player.nflId)] = diff_vel
         
 
-    # Construct tensor
-    num_features = 5 * 2 # multiply by 2 because there is an (x,y) associated with each feature
+    # CONSTRUCT TENSOR
+    ############################################################################################################
+
+    # FEATURES:
+    # 1) def velocity (v_x, v_y)
+    # 2) def position relative to receiver (x,y)
+    # 3) def velocity relative to receiver (v_x, v_y)
+    # 4) off - def position (x,y)
+    # 5) off - def velocity (v_x, v_y)
+    # 6) Down (1, 2, 3, or 4)
+
+    num_features = (5 * 2) + 1 # multiply by 2 because there is an (x,y) associated with each feature + feature for "down"
     def_count = 11
     off_count = 10
     tensor = np.zeros((num_features, def_count, off_count))
@@ -330,7 +343,7 @@ def create_input_tensor(play, play_data, player_data):
         def_nflId = def_player.nflId
 
         # Get features relative to receiver
-        def_v_x, def_v_y = player_velocities[def_nflId]
+        def_v_x, def_v_y = player_vel[def_nflId]
         rel_pos_x, rel_pos_y = def_rel_pos[def_nflId]
         rel_vel_x, rel_vel_y = def_rel_vel[def_nflId]
 
@@ -342,6 +355,7 @@ def create_input_tensor(play, play_data, player_data):
             off_def_rel_vel_x, off_def_rel_vel_y = off_def_pair_vel[(off_nflId, def_nflId)]
 
             # Fill tensor for current (def_player, off_player) pair
+
             # Channels 0-1: def velocity (v_x, v_y)
             tensor[0, i, j] = def_v_x
             tensor[1, i, j] = def_v_y
@@ -362,7 +376,10 @@ def create_input_tensor(play, play_data, player_data):
             tensor[8, i, j] = off_def_rel_vel_x
             tensor[9, i, j] = off_def_rel_vel_y
 
+            # Channel 10: normalized down value
+            tensor[10, :, :] = down_norm
 
+    return tensor
 
 
     print('==========================================')

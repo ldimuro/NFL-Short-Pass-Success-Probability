@@ -109,7 +109,7 @@ def main():
     all_players = all_players.drop_duplicates(subset=['nflId'])
     count = 0
     for play,play_data in total_data.items():
-        data_processing.create_input_tensor(play, play_data, all_players)
+        tensor = data_processing.create_input_tensor(play, play_data, all_players)
         count += 1
 
         if count == 1:
