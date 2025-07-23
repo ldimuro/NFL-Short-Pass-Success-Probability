@@ -9,7 +9,7 @@ import shutil
 def plot_frame(frame, play_data, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
 
-    ball = frame[frame['club'] == 'football'].iloc[0]
+    ball = frame[frame['team'] == 'football'].iloc[0] if frame['club'].isna().all() else frame[frame['club'] == 'football'].iloc[0]
     ball_x = ball['x']
     ball_y = ball['y']
 
@@ -94,17 +94,17 @@ def plot_frame(frame, play_data, file_name, zoom):
     # ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE + play_data['yardsToGo'], color="#f2d627", linewidth=6 if zoom else 2, zorder=2.2)
 
     # Handle team colors
-    teams = frame['club'].unique().tolist()
+    teams = frame['team'].unique().tolist() if frame['club'].isna().all() else frame['club'].unique().tolist()
     teams.remove('football')
     color_map = {teams[0]: team_colors[teams[0]], teams[1]: team_colors[teams[1]], 'football': '#dec000'}
 
     # Add ball
-    football = frame[frame['club'] == 'football']
+    football = frame[frame['team'] == 'football'] if frame['club'].isna().all() else frame[frame['club'] == 'football']
     ax.scatter(football['x'], football['y'], c='#dec000', s=500 if zoom else 25, marker='o',zorder=3.1)
 
     # Add players
-    players = frame[frame['club'] != 'football']
-    ax.scatter(players['x'], players['y'], c=players['club'].map(color_map), s=1000 if zoom else 60, zorder=3)
+    players = frame[frame['team'] != 'football'] if frame['club'].isna().all() else frame[frame['club'] != 'football']
+    ax.scatter(players['x'], players['y'], c=players['team' if frame['club'].isna().all() else 'club'].map(color_map), s=1000 if zoom else 60, zorder=3)
 
     # Add jersey numbers
     for _, row in frame.iterrows():
