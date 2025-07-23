@@ -33,21 +33,22 @@ def main():
     # set_seed()
 
     is_testing = True
-    is_data_processing = True
+    is_data_processing = False
+
+    all_player_data = get_data.get_player_data(year=2022)
+    all_player_data_2021 = get_data.get_player_data(year=2021)
 
 
     if is_data_processing:
 
         # Obtain all play and tracking data
         all_tracking_data = get_data.get_tracking_data(year=2022, week_start=1, week_end=1)
-        all_tracking_data_2021 = get_data.get_tracking_data(year=2021, week_start=1, week_end=8)
+        all_tracking_data_2021 = get_data.get_tracking_data(year=2021, week_start=1, week_end=1)
         all_tracking_df = pd.concat(all_tracking_data, ignore_index=True)
         all_tracking_df_2021 = pd.concat(all_tracking_data_2021, ignore_index=True)
         all_play_data = get_data.get_play_data(year=2022)
         all_play_data_2021 = get_data.get_play_data(year=2021)
-        all_player_data = get_data.get_player_data(year=2022)
-        all_player_data_2021 = get_data.get_player_data(year=2021)
-        all_player_play_data = get_data.get_player_play_data(year=2022)
+        # all_player_play_data = get_data.get_player_play_data(year=2022)
 
         
 
@@ -98,33 +99,53 @@ def main():
 
     data_2021 = data_processing.get_dict('behind_los_play_data_2021_centered_weeks1-8')  # 1142 samples
     data_2022 = data_processing.get_dict('behind_los_play_data_2022_centered_weeks1-9')  # 1985 samples
+    total_data = data_2021 | data_2022
 
     print('data_2021:', len(data_2021))
     print('data_2022:', len(data_2022))
+    print('TOTAL DATA:', len(total_data))
+
+    all_players =  pd.concat([all_player_data, all_player_data_2021])
+    all_players = all_players.drop_duplicates(subset=['nflId'])
+    count = 0
+    for play,play_data in total_data.items():
+        data_processing.create_input_tensor(play, play_data, all_players)
+        count += 1
+
+        if count == 1:
+            break
 
 
 
 
-    # random_gameId, random_playId = random.choice(list(data_2021.keys()))
-    # test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
-    # passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
 
-    # for play,play_frames in passes_2021_dict.items():
-    #     game_id, play_id = play
-    #     play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
-    #     print(play_frames)
-    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
 
-    # for i in range(1):
-    #     random_gameId, random_playId = random.choice(list(data_2022.keys()))
-    #     test_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == random_gameId) & (passes_behind_los_play_data['playId'] == random_playId)]
-    #     passes_2022_dict = data_processing.get_relevant_frames(test_data, passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
 
-    #     for play,play_frames in passes_2022_dict.items():
-    #         game_id, play_id = play
-    #         play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
-    #         print(play_frames)
-    #         visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+
+
+
+
+    if is_data_processing:
+        random_gameId, random_playId = random.choice(list(data_2021.keys()))
+        test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
+        passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
+
+        for play,play_frames in passes_2021_dict.items():
+            game_id, play_id = play
+            play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
+            print(play_frames)
+            visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+
+        for i in range(1):
+            random_gameId, random_playId = random.choice(list(data_2022.keys()))
+            test_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == random_gameId) & (passes_behind_los_play_data['playId'] == random_playId)]
+            passes_2022_dict = data_processing.get_relevant_frames(test_data, passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
+
+            for play,play_frames in passes_2022_dict.items():
+                game_id, play_id = play
+                play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
+                print(play_frames)
+                visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
 
 
 

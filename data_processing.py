@@ -5,6 +5,7 @@ import constants
 import math
 import re
 import pickle
+from itertools import product
 
 
 def filter_tracking_data(tracking_data, passing_play_data):
@@ -60,36 +61,6 @@ def normalize_to_center(tracking_data: DataFrame):
         normalized_weeks.append(pd.concat(normalized_plays, ignore_index=True))
 
     return normalized_weeks
-
-    # normalized_tracking_data = []
-    # for week_df in tracking_data:
-    #     week_df = week_df.copy()
-
-    #     # Find the ball's first frame
-    #     ball_rows = week_df[week_df['team' if 'team' in week_df.columns else 'club'] == 'football']
-    #     if ball_rows.empty:
-    #         normalized_tracking_data.append(week_df)
-    #         continue
-
-    #     ball_x = ball_rows.iloc[0]['x']
-
-    #     # Shift all x-coordinates so that the ball starts at center field
-    #     shift_x = constants.CENTER_FIELD - ball_x
-    #     week_df['x'] += shift_x
-
-    #     normalized_tracking_data.append(week_df)
-
-    # return normalized_tracking_data
-
-    # normalized_play_frames = play_frames.copy()
-    # ball_x, ball_y = ball_coord
-
-    # # Place ball x-axis at center field, and adjust all other players' positions around it
-    # shift_x = constants.CENTER_FIELD - ball_x
-    # normalized_play_frames['x'] += shift_x
-
-    # return normalized_play_frames
-
 
 
 
@@ -284,6 +255,81 @@ def estimate_play_success(play_data: DataFrame):
         is_success = True if yards_ratio >= 1.0 else False
     
     return is_success
+
+
+
+def create_input_tensor(play, play_data, player_data):
+    print('play:', play)
+    print('receiver:', play_data['receiver_id'])
+    print(play_data)
+
+    players_on_field = play_data['tracking_data']
+    players_on_field = players_on_field[~players_on_field['nflId'].isna()] # remove 'football' from tracking_data
+
+    receiver_id = play_data['receiver_id']
+    receiver = players_on_field[players_on_field['nflId'] == receiver_id].iloc[0]
+    print('receiver:\n', receiver)
+
+    # Remove the receiver from the tracking_data
+    players_without_receiver = players_on_field[~(players_on_field['nflId'].isna() | (players_on_field['nflId'] == receiver_id))]
+    # print(f'players_without_receiver ({len(players_without_receiver)}):\n', players_without_receiver)
+
+    # Merge tracking_data with player positions in player_data
+    merged_df = players_without_receiver.merge(player_data[['nflId', 'position']], on='nflId', how='left')
+
+    #  Filter offensive and defensive players based on position
+    off_players = merged_df[merged_df['position'].isin(constants.OFF_POSITIONS)].copy()
+    def_players = merged_df[merged_df['position'].isin(constants.DEF_POSITIONS)].copy()
+
+    print(f'off_players ({len(off_players)}):\n', off_players)
+    print(f'def_players ({len(def_players)}):\n', def_players)
+
+    # Get velocity of every player (including the receiver)
+    player_velocities = {}
+    for i,player in players_on_field.iterrows():
+        player_nflId = player['nflId']
+        player_speed = player['dis'] * 10 #player['s']
+        player_dir = np.deg2rad(player['dir']) # TODO: Is this right?
+        player_v_x = player_speed * np.cos(player_dir) # TODO: is it x=cos, y=sin, or vice versa?
+        player_v_y = player_speed * np.sin(player_dir)
+
+        player_velocities[player_nflId] = (player_v_x, player_v_y)
+
+    # Calculate relative positions and speeds of every defender to receiver
+    def_rel_pos = {}
+    def_rel_speed = {}
+    for i,defender in def_players.iterrows():
+        rel_pos = (defender['x'] - receiver['x'], defender['y'] - receiver['y'])
+        rel_speed = (player_velocities[defender['nflId']][0] - player_velocities[receiver_id][0], 
+                     player_velocities[defender['nflId']][1] - player_velocities[receiver_id][1])
+
+        def_rel_pos[defender['nflId']] = rel_pos
+        def_rel_speed[defender['nflId']] = rel_speed
+
+    
+    # Calculate relative positions and speeds of every pair of offensive/defensive players (excluding receiver)
+    off_def_pair_pos = {}
+    off_def_pair_speed = {}
+    for off_player, def_player in product(off_players.itertuples(index=False), def_players.itertuples(index=False)):
+        diff_pos = (off_player.x - def_player.x, off_player.y - def_player.y)
+        diff_speed = (player_velocities[off_player.nflId][0] - player_velocities[def_player.nflId][0], 
+                     player_velocities[off_player.nflId][1] - player_velocities[def_player.nflId][1])
+        
+        off_def_pair_pos[(off_player.nflId, def_player.nflId)] = diff_pos
+        off_def_pair_speed[(off_player.nflId, def_player.nflId)] = diff_speed
+        
+
+    # Construct tensor
+
+
+
+    print('==========================================')
+
+
+
+
+
+
     
 
 def save_dict(dict, file_name):

@@ -15,3 +15,6 @@ BALL_SNAP = 'ball_snap'
 PASS_FORWARD = 'pass_forward'
 PASS_ARRIVED = 'pass_arrived'
 AUTO_PASS_FORWARD = 'autoevent_passforward'
+
+OFF_POSITIONS = ['QB', 'WR', 'RB', 'TE', 'T', 'G', 'C', 'FB']
+DEF_POSITIONS = ['CB', 'OLB', 'DE', 'DT', 'ILB', 'FS', 'SS', 'NT', 'MLB', 'DB', 'LB']
