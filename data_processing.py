@@ -264,7 +264,7 @@ def create_input_tensor(play, play_data, player_data):
     print(play_data)
 
     players_on_field = play_data['tracking_data']
-    players_on_field = players_on_field[~players_on_field['nflId'].isna()] # remove 'football' from tracking_data
+    players_on_field = players_on_field[players_on_field['nflId'].notna()] # remove 'football' from tracking_data
 
     receiver_id = play_data['receiver_id']
     receiver = players_on_field[players_on_field['nflId'] == receiver_id].iloc[0]
@@ -297,29 +297,71 @@ def create_input_tensor(play, play_data, player_data):
 
     # Calculate relative positions and speeds of every defender to receiver
     def_rel_pos = {}
-    def_rel_speed = {}
+    def_rel_vel = {}
     for i,defender in def_players.iterrows():
         rel_pos = (defender['x'] - receiver['x'], defender['y'] - receiver['y'])
-        rel_speed = (player_velocities[defender['nflId']][0] - player_velocities[receiver_id][0], 
+        rel_vel = (player_velocities[defender['nflId']][0] - player_velocities[receiver_id][0], 
                      player_velocities[defender['nflId']][1] - player_velocities[receiver_id][1])
 
         def_rel_pos[defender['nflId']] = rel_pos
-        def_rel_speed[defender['nflId']] = rel_speed
+        def_rel_vel[defender['nflId']] = rel_vel
 
     
     # Calculate relative positions and speeds of every pair of offensive/defensive players (excluding receiver)
     off_def_pair_pos = {}
-    off_def_pair_speed = {}
+    off_def_pair_vel = {}
     for off_player, def_player in product(off_players.itertuples(index=False), def_players.itertuples(index=False)):
         diff_pos = (off_player.x - def_player.x, off_player.y - def_player.y)
-        diff_speed = (player_velocities[off_player.nflId][0] - player_velocities[def_player.nflId][0], 
+        diff_vel = (player_velocities[off_player.nflId][0] - player_velocities[def_player.nflId][0], 
                      player_velocities[off_player.nflId][1] - player_velocities[def_player.nflId][1])
         
         off_def_pair_pos[(off_player.nflId, def_player.nflId)] = diff_pos
-        off_def_pair_speed[(off_player.nflId, def_player.nflId)] = diff_speed
+        off_def_pair_vel[(off_player.nflId, def_player.nflId)] = diff_vel
         
 
     # Construct tensor
+    num_features = 5 * 2 # multiply by 2 because there is an (x,y) associated with each feature
+    def_count = 11
+    off_count = 10
+    tensor = np.zeros((num_features, def_count, off_count))
+    print('tensor:', tensor.shape)
+
+    for i, def_player in enumerate(def_players.itertuples(index=False)):
+        def_nflId = def_player.nflId
+
+        # Get features relative to receiver
+        def_v_x, def_v_y = player_velocities[def_nflId]
+        rel_pos_x, rel_pos_y = def_rel_pos[def_nflId]
+        rel_vel_x, rel_vel_y = def_rel_vel[def_nflId]
+
+        for j, off_player in enumerate(off_players.itertuples(index=False)):
+            off_nflId = off_player.nflId
+
+            # Get features between defender and current offensive player
+            off_def_rel_pos_x, off_def_rel_pos_y = off_def_pair_pos[(off_nflId, def_nflId)]
+            off_def_rel_vel_x, off_def_rel_vel_y = off_def_pair_vel[(off_nflId, def_nflId)]
+
+            # Fill tensor for current (def_player, off_player) pair
+            # Channels 0-1: def velocity (v_x, v_y)
+            tensor[0, i, j] = def_v_x
+            tensor[1, i, j] = def_v_y
+
+            # Channels 2-3: def position relative to receiver (x,y)
+            tensor[2, i, j] = rel_pos_x
+            tensor[3, i, j] = rel_pos_y
+
+            # Channel 4-5: def velocity relative to receiver (v_x, v_y)
+            tensor[4, i, j] = rel_vel_x
+            tensor[5, i, j] = rel_vel_y
+
+            # Channel 6-7: off - def position (x,y)
+            tensor[6, i, j] = off_def_rel_pos_x
+            tensor[7, i, j] = off_def_rel_pos_y
+
+            # Channel 8-9: off - def velocity (v_x, v_y)
+            tensor[8, i, j] = off_def_rel_vel_x
+            tensor[9, i, j] = off_def_rel_vel_y
+
 
 
 
