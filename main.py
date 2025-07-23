@@ -58,6 +58,7 @@ def main():
                                                     (all_play_data_2021['playDescription'].str.contains('short', case=False, na=False))]# & (all_play_data_2021['playResult'] <= 3)]
         passing_tracking_data_2021 = data_processing.filter_tracking_data(all_tracking_data_2021, passing_play_data_2021)
         passing_tracking_data_2021 = data_processing.normalize_field_direction(passing_tracking_data_2021)
+        passing_tracking_data_2021 = data_processing.normalize_to_center(passing_tracking_data_2021)
 
         
         # Filter to include only pass plays that were thrown within 1 yards of the LoS
@@ -70,6 +71,7 @@ def main():
                                                         # (passing_play_data['targetY'] < constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH / 2)]
         passes_behind_los_tracking_data = data_processing.filter_tracking_data(all_tracking_data, passes_behind_los_play_data)
         passes_behind_los_tracking_data = data_processing.normalize_field_direction(passes_behind_los_tracking_data)
+        passes_behind_los_tracking_data = data_processing.normalize_to_center(passes_behind_los_tracking_data)
         
 
         print('# of passing plays:', len(passing_play_data))
@@ -94,20 +96,35 @@ def main():
 
 
 
-    data_2021 = data_processing.get_dict('behind_los_play_data_2021_weeks1-8')  # 1176 samples
-    data_2022 = data_processing.get_dict('behind_los_play_data_2022_weeks1-9')  # 1972 samples
+    data_2021 = data_processing.get_dict('behind_los_play_data_2021_centered_weeks1-8')  # 1142 samples
+    data_2022 = data_processing.get_dict('behind_los_play_data_2022_centered_weeks1-9')  # 1985 samples
 
     print('data_2021:', len(data_2021))
     print('data_2022:', len(data_2022))
 
-    random_gameId, random_playId = random.choice(list(data_2021.keys()))
-    test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
-    passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
 
-    for play,play_frames in passes_2021_dict.items():
-        game_id, play_id = play
-        play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
-        visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm', loop=False, zoom=False)
+
+
+    # random_gameId, random_playId = random.choice(list(data_2021.keys()))
+    # test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
+    # passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
+
+    # for play,play_frames in passes_2021_dict.items():
+    #     game_id, play_id = play
+    #     play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
+    #     print(play_frames)
+    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+
+    # for i in range(1):
+    #     random_gameId, random_playId = random.choice(list(data_2022.keys()))
+    #     test_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == random_gameId) & (passes_behind_los_play_data['playId'] == random_playId)]
+    #     passes_2022_dict = data_processing.get_relevant_frames(test_data, passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
+
+    #     for play,play_frames in passes_2022_dict.items():
+    #         game_id, play_id = play
+    #         play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
+    #         print(play_frames)
+    #         visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
 
 
 

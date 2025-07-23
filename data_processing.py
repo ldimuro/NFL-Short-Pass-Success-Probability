@@ -35,20 +35,65 @@ def normalize_field_direction(tracking_data):
 
     return normalized_tracking_data
 
-def normalize_to_center(play_frames, ball_coord):
-    normalized_play_frames = play_frames.copy()
-    ball_x, ball_y = ball_coord
+def normalize_to_center(tracking_data: DataFrame):
+    normalized_weeks = []
+    
+    for week_df in tracking_data:
+        week_df = week_df.copy()
+        normalized_plays = []
 
-    # Place ball x-axis at center field, and adjust all other players' positions around it
-    shift_x = constants.CENTER_FIELD - ball_x
-    normalized_play_frames['x'] += shift_x
+        # Group by each play (gameId + playId)
+        for (game_id, play_id), play_df in week_df.groupby(['gameId', 'playId']):
+            ball_rows = play_df[play_df['team' if 'team' in week_df.columns else 'club'] == 'football']
+            if ball_rows.empty:
+                normalized_plays.append(play_df)
+                continue
 
-    return normalized_play_frames
+            # Calculate shift to move ball x to 60
+            ball_x = ball_rows.iloc[0]['x']
+            shift_x = 60 - ball_x
+
+            play_df['x'] = play_df['x'] + shift_x
+            normalized_plays.append(play_df)
+
+        # Combine all normalized plays back into one DataFrame for the week
+        normalized_weeks.append(pd.concat(normalized_plays, ignore_index=True))
+
+    return normalized_weeks
+
+    # normalized_tracking_data = []
+    # for week_df in tracking_data:
+    #     week_df = week_df.copy()
+
+    #     # Find the ball's first frame
+    #     ball_rows = week_df[week_df['team' if 'team' in week_df.columns else 'club'] == 'football']
+    #     if ball_rows.empty:
+    #         normalized_tracking_data.append(week_df)
+    #         continue
+
+    #     ball_x = ball_rows.iloc[0]['x']
+
+    #     # Shift all x-coordinates so that the ball starts at center field
+    #     shift_x = constants.CENTER_FIELD - ball_x
+    #     week_df['x'] += shift_x
+
+    #     normalized_tracking_data.append(week_df)
+
+    # return normalized_tracking_data
+
+    # normalized_play_frames = play_frames.copy()
+    # ball_x, ball_y = ball_coord
+
+    # # Place ball x-axis at center field, and adjust all other players' positions around it
+    # shift_x = constants.CENTER_FIELD - ball_x
+    # normalized_play_frames['x'] += shift_x
+
+    # return normalized_play_frames
 
 
 
 
-def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_events):
+def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_events, extra_frames=0):
     play_tracking_dict = {}
 
     # Collapse all weeks of tracking data into 1 DataFrame
