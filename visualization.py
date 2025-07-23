@@ -108,7 +108,7 @@ def plot_frame(frame, play_data, file_name, zoom):
     ax.scatter(players['x'], players['y'], c=players['team' if frame['club'].isna().all() else 'club'].map(color_map), s=1000 if zoom else 60, zorder=3)
 
     # Convert angles to radians
-    angles = np.deg2rad(players['dir'].fillna(0))
+    angles = np.deg2rad(players['o'].fillna(0))
     dx = np.sin(angles)   # X-component of direction
     dy = np.cos(angles)   # Y-component of direction
 
@@ -121,7 +121,7 @@ def plot_frame(frame, play_data, file_name, zoom):
     y_offset = players['y'] + dy * marker_radius
 
     # Arrow length
-    arrow_length = 1.0 if zoom else 0.5
+    arrow_length = 0.8#1.0 if zoom else 0.5
 
     ax.quiver(
         x_offset, y_offset,   # Offset starting points
@@ -130,7 +130,7 @@ def plot_frame(frame, play_data, file_name, zoom):
         scale_units='xy',
         scale=1 / arrow_length,
         color=players['team' if frame['club'].isna().all() else 'club'].map(color_map),
-        width=0.01 if zoom else 0.0015,
+        width=0.005,#0.01 if zoom else 0.0015,
         zorder=4
     )
 
