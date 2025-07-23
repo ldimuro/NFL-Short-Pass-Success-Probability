@@ -27,8 +27,8 @@ def normalize_field_direction(tracking_data):
 
         left_mask = week_df['playDirection'] == 'left'
         week_df.loc[left_mask, 'x'] = constants.FIELD_LENGTH - week_df.loc[left_mask, 'x']
-        week_df.loc[left_mask, 'o'] = (180 - week_df.loc[left_mask, 'o']) % 360
-        week_df.loc[left_mask, 'dir'] = (180 - week_df.loc[left_mask, 'dir']) % 360
+        week_df.loc[left_mask, 'o'] = (360 - week_df.loc[left_mask, 'o']) % 360
+        week_df.loc[left_mask, 'dir'] = (360 - week_df.loc[left_mask, 'dir']) % 360
         week_df.loc[left_mask, 'playDirection'] = 'right_norm'
 
         normalized_tracking_data.append(week_df)

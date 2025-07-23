@@ -5,6 +5,7 @@ from pandas import DataFrame
 import os
 import imageio.v2 as imageio
 import shutil
+import numpy as np
 
 def plot_frame(frame, play_data, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
@@ -106,6 +107,33 @@ def plot_frame(frame, play_data, file_name, zoom):
     players = frame[frame['team'] != 'football'] if frame['club'].isna().all() else frame[frame['club'] != 'football']
     ax.scatter(players['x'], players['y'], c=players['team' if frame['club'].isna().all() else 'club'].map(color_map), s=1000 if zoom else 60, zorder=3)
 
+    # Convert angles to radians
+    angles = np.deg2rad(players['dir'].fillna(0))
+    dx = np.sin(angles)   # X-component of direction
+    dy = np.cos(angles)   # Y-component of direction
+
+    # Offset distance: approximate radius of player circle
+    # Adjust scaling for zoom vs. full field
+    marker_radius = 1.2 if zoom else 0.4  # tweak until it looks right
+
+    # Apply offset to starting positions
+    x_offset = players['x'] + dx * marker_radius
+    y_offset = players['y'] + dy * marker_radius
+
+    # Arrow length
+    arrow_length = 1.0 if zoom else 0.5
+
+    ax.quiver(
+        x_offset, y_offset,   # Offset starting points
+        dx, dy,               # Arrow directions
+        angles='xy',
+        scale_units='xy',
+        scale=1 / arrow_length,
+        color=players['team' if frame['club'].isna().all() else 'club'].map(color_map),
+        width=0.01 if zoom else 0.0015,
+        zorder=4
+    )
+
     # Add jersey numbers
     for _, row in frame.iterrows():
         # Only plot the labels of players in frame
@@ -140,9 +168,6 @@ def plot_frame(frame, play_data, file_name, zoom):
 
 
 def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False, loop=True):
-    print('play_data:', play_data)
-    # print('frames:\n', frames)
-
     frame_start = frames['frameId'].min()
     frame_end = frames['frameId'].max()
 
