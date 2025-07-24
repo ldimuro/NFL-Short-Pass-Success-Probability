@@ -69,7 +69,6 @@ def main():
 
         passing_play_data_2018 = all_play_data_2018[(all_play_data_2018['passResult'] == 'C') &
                                                     (all_play_data_2018['playDescription'].str.contains('short', case=False, na=False))]# & (all_play_data_2018['playResult'] <= 3)]
-        print('passing_play_data_2018:', len(passing_play_data_2018))
         passing_tracking_data_2018 = data_processing.filter_tracking_data(all_tracking_data_2018, passing_play_data_2018)
         passing_tracking_data_2018 = data_processing.normalize_field_direction(passing_tracking_data_2018)
         passing_tracking_data_2018 = data_processing.normalize_to_center(passing_tracking_data_2018)
@@ -129,31 +128,55 @@ def main():
     count_true = sum(1 for v in total_data.values() if v.get('label') is True)
     print(f'play success ratio: {count_true/len(total_data)*100:.2f}% ({count_true}/{len(total_data)})')
 
+
+
+
     # all_players =  pd.concat([all_player_data, all_player_data_2021, all_player_data_2018])
     # all_players = all_players.drop_duplicates(subset=['nflId'])
     # input_tensors = []
+    # labels = []
     # skipped = []
     # for play,play_data in total_data.items():
     #     game_id, play_id = play
 
     #     # Occasionally there are more/less than 11 players on each side, catch this error and skip
     #     try:
+    #         # Create input tensor
     #         tensor = data_processing.create_input_tensor(play_data, all_players)
     #         input_tensors.append(tensor)
-    #         print(f"created tensor for ({game_id},{play_id})")
+
+    #         # Save corresponding label to input tensor
+    #         label = int(play_data['label'])
+    #         labels.append(label)
+
+    #         print(f"created tensor+label for ({game_id},{play_id})")
+
+
     #     except:
     #         skipped.append(play)
     #         print(f"ERROR FOR ({game_id},{play_id})")
 
     # print('skipped:', len(skipped))
     # print('FINAL TENSOR COUNT:', len(input_tensors)) # 7683 total input tensors
+    # print('FINAL LABEL COUNT:', len(labels))
 
     # data_processing.save_data(input_tensors, 'total_behind_los_pass_input_tensors')
+    # data_processing.save_data(labels, 'total_behind_los_pass_labels')
+
+
+
 
     input_tensors = data_processing.get_data('total_behind_los_pass_input_tensors')
     print('TOTAL INPUT TENSORS:', len(input_tensors))
 
+    labels = data_processing.get_data('total_behind_los_pass_labels')
+    print('TOTAL INPUT LABELS:', len(labels))
 
+    x = torch.from_numpy(np.array(input_tensors, dtype=np.float32))
+    print('x:', x.shape)
+
+    y = torch.from_numpy(np.array(labels, dtype=np.int64))
+    print('y:', y.shape)
 
 
 
@@ -164,26 +187,36 @@ def main():
 
 
     # if is_data_processing:
-    #     random_gameId, random_playId = random.choice(list(data_2021.keys()))
-    #     test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
-    #     passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
+        # random_gameId, random_playId = random.choice(list(data_2018.keys()))
+        # test_data = passing_play_data_2018[(passing_play_data_2018['gameId'] == random_gameId) & (passing_play_data_2018['playId'] == random_playId)]
+        # passes_2018_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2018, start_events=[constants.START], end_events=[constants.END])
 
-    #     for play,play_frames in passes_2021_dict.items():
-    #         game_id, play_id = play
-    #         play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
-    #         print(play_frames)
-    #         visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+        # for play,play_frames in passes_2018_dict.items():
+        #     game_id, play_id = play
+        #     play_data = passing_play_data_2018[(passing_play_data_2018['gameId'] == game_id) & (passing_play_data_2018['playId'] == play_id)].iloc[0]
+        #     print(play_frames)
+        #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
 
-    #     for i in range(1):
-    #         random_gameId, random_playId = random.choice(list(data_2022.keys()))
-    #         test_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == random_gameId) & (passes_behind_los_play_data['playId'] == random_playId)]
-    #         passes_2022_dict = data_processing.get_relevant_frames(test_data, passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
+        # random_gameId, random_playId = random.choice(list(data_2021.keys()))
+        # test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
+        # passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
 
-    #         for play,play_frames in passes_2022_dict.items():
-    #             game_id, play_id = play
-    #             play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
-    #             print(play_frames)
-    #             visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+        # for play,play_frames in passes_2021_dict.items():
+        #     game_id, play_id = play
+        #     play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
+        #     print(play_frames)
+        #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+
+        # for i in range(1):
+        #     random_gameId, random_playId = random.choice(list(data_2018.keys()))
+        #     test_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == random_gameId) & (passes_behind_los_play_data['playId'] == random_playId)]
+        #     passes_2022_dict = data_processing.get_relevant_frames(test_data, passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
+
+        #     for play,play_frames in passes_2022_dict.items():
+        #         game_id, play_id = play
+        #         play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
+        #         print(play_frames)
+        #         visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
 
 
 
