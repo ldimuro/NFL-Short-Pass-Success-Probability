@@ -259,9 +259,8 @@ def estimate_play_success(play_data: DataFrame):
 
 
 def create_input_tensor(play, play_data, player_data):
-    print('play:', play)
-    print('receiver:', play_data['receiver_id'])
-    print(play_data)
+    # print('receiver:', play_data['receiver_id'])
+    # print(play_data)
 
     down = play_data['down']
     down_norm = down / 4.0
@@ -271,10 +270,10 @@ def create_input_tensor(play, play_data, player_data):
 
     receiver_id = play_data['receiver_id']
     receiver = players_on_field[players_on_field['nflId'] == receiver_id].iloc[0]
-    print('receiver:\n', receiver)
+    # print('receiver:\n', receiver)
 
     # Remove the receiver from the tracking_data
-    players_without_receiver = players_on_field[~(players_on_field['nflId'].isna() | (players_on_field['nflId'] == receiver_id))]
+    players_without_receiver = players_on_field[players_on_field['nflId'] != receiver_id]
     # print(f'players_without_receiver ({len(players_without_receiver)}):\n', players_without_receiver)
 
     # Merge tracking_data with player positions in player_data
@@ -284,8 +283,8 @@ def create_input_tensor(play, play_data, player_data):
     off_players = merged_df[merged_df['position'].isin(constants.OFF_POSITIONS)].copy()
     def_players = merged_df[merged_df['position'].isin(constants.DEF_POSITIONS)].copy()
 
-    print(f'off_players ({len(off_players)}):\n', off_players)
-    print(f'def_players ({len(def_players)}):\n', def_players)
+    # print(f'off_players ({len(off_players)}):\n', off_players)
+    # print(f'def_players ({len(def_players)}):\n', def_players)
 
     # Get velocity of every player (including the receiver)
     player_vel = {}
@@ -331,13 +330,13 @@ def create_input_tensor(play, play_data, player_data):
     # 3) def velocity relative to receiver (v_x, v_y)
     # 4) off - def position (x,y)
     # 5) off - def velocity (v_x, v_y)
-    # 6) Down (1, 2, 3, or 4)
+    # 6) down (0.25, 0.5, 0.75, or 1.0)
 
     num_features = (5 * 2) + 1 # multiply by 2 because there is an (x,y) associated with each feature + feature for "down"
     def_count = 11
     off_count = 10
     tensor = np.zeros((num_features, def_count, off_count))
-    print('tensor:', tensor.shape)
+    # print('tensor:', tensor.shape)
 
     for i, def_player in enumerate(def_players.itertuples(index=False)):
         def_nflId = def_player.nflId
@@ -376,13 +375,10 @@ def create_input_tensor(play, play_data, player_data):
             tensor[8, i, j] = off_def_rel_vel_x
             tensor[9, i, j] = off_def_rel_vel_y
 
-            # Channel 10: normalized down value
-            tensor[10, :, :] = down_norm
+    # Channel 10: normalized down value
+    tensor[10, i, j] = down_norm
 
     return tensor
-
-
-    print('==========================================')
 
 
 
