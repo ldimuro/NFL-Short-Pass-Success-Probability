@@ -33,7 +33,7 @@ def main():
     # set_seed()
 
     is_testing = True
-    is_data_processing = True
+    is_data_processing = False
 
     all_player_data = get_data.get_player_data(year=2022)
     all_player_data_2021 = get_data.get_player_data(year=2021)
@@ -102,21 +102,21 @@ def main():
 
         # behind_los_play_data_2021 = data_processing.get_data_at_pass_forward(passing_play_data_2021, passing_tracking_data_2021, all_player_data_2021)
         # print(f'PLAYS EXTRACTED {len(behind_los_play_data_2021)}/{len(passing_play_data_2021)}')
-        # data_processing.save_dict(behind_los_play_data_2021, 'behind_los_play_data_2021_weeks1-8')
+        # data_processing.save_data(behind_los_play_data_2021, 'behind_los_play_data_2021_weeks1-8')
 
         # behind_los_play_data_2022 = data_processing.get_data_at_pass_forward(passes_behind_los_play_data, passes_behind_los_tracking_data, all_player_data)
         # print(f'PLAYS EXTRACTED {len(behind_los_play_data_2022)}/{len(passes_behind_los_play_data)}')
-        # data_processing.save_dict(behind_los_play_data_2022, 'behind_los_play_data_2022_weeks1-9')
+        # data_processing.save_data(behind_los_play_data_2022, 'behind_los_play_data_2022_weeks1-9')
 
         # behind_los_play_data_2018 = data_processing.get_data_at_pass_forward(passing_play_data_2018, passing_tracking_data_2018, all_player_data_2018)
         # print(f'PLAYS EXTRACTED {len(behind_los_play_data_2018)}/{len(passing_play_data_2018)}')
-        # data_processing.save_dict(behind_los_play_data_2018, 'behind_los_play_data_2018_weeks1-17')
+        # data_processing.save_data(behind_los_play_data_2018, 'behind_los_play_data_2018_weeks1-17')
 
 
 
-    data_2021 = data_processing.get_dict('behind_los_play_data_2021_centered_weeks1-8')  # 1142 samples
-    data_2022 = data_processing.get_dict('behind_los_play_data_2022_centered_weeks1-9')  # 1985 samples
-    data_2018 = data_processing.get_dict('behind_los_play_data_2018_centered_weeks1-17') # 4565 samples
+    data_2021 = data_processing.get_data('behind_los_play_data_2021_centered_weeks1-8')  # 1142 samples
+    data_2022 = data_processing.get_data('behind_los_play_data_2022_centered_weeks1-9')  # 1985 samples
+    data_2018 = data_processing.get_data('behind_los_play_data_2018_centered_weeks1-17') # 4565 samples
     total_data = data_2021 | data_2022 | data_2018
 
     print('data_2021:', len(data_2021))
@@ -129,25 +129,29 @@ def main():
     count_true = sum(1 for v in total_data.values() if v.get('label') is True)
     print(f'play success ratio: {count_true/len(total_data)*100:.2f}% ({count_true}/{len(total_data)})')
 
-    all_players =  pd.concat([all_player_data, all_player_data_2021, all_play_data_2018])
-    all_players = all_players.drop_duplicates(subset=['nflId'])
-    input_tensors = []
-    skipped = []
-    for play,play_data in total_data.items():
-        game_id, play_id = play
+    # all_players =  pd.concat([all_player_data, all_player_data_2021, all_player_data_2018])
+    # all_players = all_players.drop_duplicates(subset=['nflId'])
+    # input_tensors = []
+    # skipped = []
+    # for play,play_data in total_data.items():
+    #     game_id, play_id = play
 
-        # Occasionally there are more/less than 11 players on each side, catch this error and skip
-        try:
-            tensor = data_processing.create_input_tensor(play_data, all_players)
-            input_tensors.append(tensor)
-            print(f"created tensor for ({game_id},{play_id})")
-        except:
-            skipped.append(play)
-            print(f"ERROR FOR ({game_id},{play_id})")
+    #     # Occasionally there are more/less than 11 players on each side, catch this error and skip
+    #     try:
+    #         tensor = data_processing.create_input_tensor(play_data, all_players)
+    #         input_tensors.append(tensor)
+    #         print(f"created tensor for ({game_id},{play_id})")
+    #     except:
+    #         skipped.append(play)
+    #         print(f"ERROR FOR ({game_id},{play_id})")
 
+    # print('skipped:', len(skipped))
+    # print('FINAL TENSOR COUNT:', len(input_tensors)) # 7683 total input tensors
 
-    print('skipped:', len(skipped))
-    print('FINAL TENSOR COUNT:', len(input_tensors)) # 3119 total input tensors
+    # data_processing.save_data(input_tensors, 'total_behind_los_pass_input_tensors')
+
+    input_tensors = data_processing.get_data('total_behind_los_pass_input_tensors')
+    print('TOTAL INPUT TENSORS:', len(input_tensors))
 
 
 

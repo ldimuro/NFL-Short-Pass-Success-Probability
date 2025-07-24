@@ -283,6 +283,10 @@ def create_input_tensor(play_data, player_data):
 
     # Remove the receiver from the tracking_data
     players_without_receiver = players_on_field[players_on_field['nflId'] != receiver_id]
+    
+    # Drop 'position' if it exists to prevent merge conflicts
+    if 'position' in players_without_receiver.columns:
+        players_without_receiver = players_without_receiver.drop(columns=['position'])
 
     # Merge tracking_data with player positions in player_data
     merged_df = players_without_receiver.merge(player_data[['nflId', 'position']], on='nflId', how='left')
@@ -392,15 +396,15 @@ def get_team(game_id, side):
 
     
 
-def save_dict(dict, file_name):
+def save_data(data, file_name):
     with open(f"{file_name}.pkl", 'wb') as f:
-        pickle.dump(dict, f)
+        pickle.dump(data, f)
 
 
-def get_dict(file_name):
+def get_data(file_name):
     with open(f"{file_name}.pkl", 'rb') as f:
-        dict = pickle.load(f)
-    return dict
+        data = pickle.load(f)
+    return data
 
 
 
