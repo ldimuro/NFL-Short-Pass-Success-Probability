@@ -33,10 +33,13 @@ def main():
     # set_seed()
 
     is_testing = True
-    is_data_processing = False
+    is_data_processing = True
 
     all_player_data = get_data.get_player_data(year=2022)
     all_player_data_2021 = get_data.get_player_data(year=2021)
+    all_player_data_2018 = get_data.get_player_data(year=2018)
+
+    # game_data_2018 = get_data.get_game_data(year=2018)
 
 
     if is_data_processing:
@@ -44,10 +47,12 @@ def main():
         # Obtain all play and tracking data
         all_tracking_data = get_data.get_tracking_data(year=2022, week_start=1, week_end=1)
         all_tracking_data_2021 = get_data.get_tracking_data(year=2021, week_start=1, week_end=1)
-        all_tracking_df = pd.concat(all_tracking_data, ignore_index=True)
-        all_tracking_df_2021 = pd.concat(all_tracking_data_2021, ignore_index=True)
+        all_tracking_data_2018 = get_data.get_tracking_data(year=2018, week_start=1, week_end=17)
+        # all_tracking_df = pd.concat(all_tracking_data, ignore_index=True)
+        # all_tracking_df_2021 = pd.concat(all_tracking_data_2021, ignore_index=True)
         all_play_data = get_data.get_play_data(year=2022)
         all_play_data_2021 = get_data.get_play_data(year=2021)
+        all_play_data_2018 = get_data.get_play_data(year=2018)
         # all_player_play_data = get_data.get_player_play_data(year=2022)
 
         
@@ -60,6 +65,14 @@ def main():
         passing_tracking_data_2021 = data_processing.filter_tracking_data(all_tracking_data_2021, passing_play_data_2021)
         passing_tracking_data_2021 = data_processing.normalize_field_direction(passing_tracking_data_2021)
         passing_tracking_data_2021 = data_processing.normalize_to_center(passing_tracking_data_2021)
+
+
+        passing_play_data_2018 = all_play_data_2018[(all_play_data_2018['passResult'] == 'C') &
+                                                    (all_play_data_2018['playDescription'].str.contains('short', case=False, na=False))]# & (all_play_data_2018['playResult'] <= 3)]
+        print('passing_play_data_2018:', len(passing_play_data_2018))
+        passing_tracking_data_2018 = data_processing.filter_tracking_data(all_tracking_data_2018, passing_play_data_2018)
+        passing_tracking_data_2018 = data_processing.normalize_field_direction(passing_tracking_data_2018)
+        passing_tracking_data_2018 = data_processing.normalize_to_center(passing_tracking_data_2018)
 
         
         # Filter to include only pass plays that were thrown within 1 yards of the LoS
@@ -75,16 +88,16 @@ def main():
         passes_behind_los_tracking_data = data_processing.normalize_to_center(passes_behind_los_tracking_data)
         
 
-        print('# of passing plays:', len(passing_play_data))
-        print('# of passing plays behind LoS:', len(passes_behind_los_play_data))
-        print('#\t Average EPA on passes behind LoS:' ,passes_behind_los_play_data['expectedPointsAdded'].mean())
+        # print('# of passing plays:', len(passing_play_data))
+        # print('# of passing plays behind LoS:', len(passes_behind_los_play_data))
+        # print('#\t Average EPA on passes behind LoS:' ,passes_behind_los_play_data['expectedPointsAdded'].mean())
 
-        median_yardsGained_yardsToGo_ratio = (passes_behind_los_play_data['yardsGained'] / passes_behind_los_play_data['yardsToGo']).median()
-        plays_above_yardsGained_yardsToGo_ratio = passes_behind_los_play_data[(passes_behind_los_play_data['yardsGained']/passes_behind_los_play_data['yardsToGo']) >= median_yardsGained_yardsToGo_ratio]
-        print('#\t Mean yardsGained/yardsToGo ratio on passes behind LoS:', median_yardsGained_yardsToGo_ratio)
-        print('#\t Percent of behind LoS passes >= median_yardsGained_yardsToGo_ratio:', len(plays_above_yardsGained_yardsToGo_ratio) / len(passes_behind_los_play_data))
-        print('#\t Max yardsGained on passes behind LoS:', passes_behind_los_play_data['yardsGained'].max())
-        print('# of 2021 passing plays:', len(all_play_data_2021))
+        # median_yardsGained_yardsToGo_ratio = (passes_behind_los_play_data['yardsGained'] / passes_behind_los_play_data['yardsToGo']).median()
+        # plays_above_yardsGained_yardsToGo_ratio = passes_behind_los_play_data[(passes_behind_los_play_data['yardsGained']/passes_behind_los_play_data['yardsToGo']) >= median_yardsGained_yardsToGo_ratio]
+        # print('#\t Mean yardsGained/yardsToGo ratio on passes behind LoS:', median_yardsGained_yardsToGo_ratio)
+        # print('#\t Percent of behind LoS passes >= median_yardsGained_yardsToGo_ratio:', len(plays_above_yardsGained_yardsToGo_ratio) / len(passes_behind_los_play_data))
+        # print('#\t Max yardsGained on passes behind LoS:', passes_behind_los_play_data['yardsGained'].max())
+        # print('# of 2021 passing plays:', len(all_play_data_2021))
 
 
         # behind_los_play_data_2021 = data_processing.get_data_at_pass_forward(passing_play_data_2021, passing_tracking_data_2021, all_player_data_2021)
@@ -95,14 +108,20 @@ def main():
         # print(f'PLAYS EXTRACTED {len(behind_los_play_data_2022)}/{len(passes_behind_los_play_data)}')
         # data_processing.save_dict(behind_los_play_data_2022, 'behind_los_play_data_2022_weeks1-9')
 
+        # behind_los_play_data_2018 = data_processing.get_data_at_pass_forward(passing_play_data_2018, passing_tracking_data_2018, all_player_data_2018)
+        # print(f'PLAYS EXTRACTED {len(behind_los_play_data_2018)}/{len(passing_play_data_2018)}')
+        # data_processing.save_dict(behind_los_play_data_2018, 'behind_los_play_data_2018_weeks1-17')
+
 
 
     data_2021 = data_processing.get_dict('behind_los_play_data_2021_centered_weeks1-8')  # 1142 samples
     data_2022 = data_processing.get_dict('behind_los_play_data_2022_centered_weeks1-9')  # 1985 samples
-    total_data = data_2021 | data_2022
+    data_2018 = data_processing.get_dict('behind_los_play_data_2018_centered_weeks1-17') # 4565 samples
+    total_data = data_2021 | data_2022 | data_2018
 
     print('data_2021:', len(data_2021))
     print('data_2022:', len(data_2022))
+    print('data_2018:', len(data_2018))
     print('TOTAL DATA:', len(total_data))
 
     # print(total_data[(2021092604,3981)])
@@ -110,7 +129,7 @@ def main():
     count_true = sum(1 for v in total_data.values() if v.get('label') is True)
     print(f'play success ratio: {count_true/len(total_data)*100:.2f}% ({count_true}/{len(total_data)})')
 
-    all_players =  pd.concat([all_player_data, all_player_data_2021])
+    all_players =  pd.concat([all_player_data, all_player_data_2021, all_play_data_2018])
     all_players = all_players.drop_duplicates(subset=['nflId'])
     input_tensors = []
     skipped = []
@@ -140,27 +159,30 @@ def main():
 
 
 
-    if is_data_processing:
-        random_gameId, random_playId = random.choice(list(data_2021.keys()))
-        test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
-        passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
+    # if is_data_processing:
+    #     random_gameId, random_playId = random.choice(list(data_2021.keys()))
+    #     test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
+    #     passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
 
-        for play,play_frames in passes_2021_dict.items():
-            game_id, play_id = play
-            play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
-            print(play_frames)
-            visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+    #     for play,play_frames in passes_2021_dict.items():
+    #         game_id, play_id = play
+    #         play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
+    #         print(play_frames)
+    #         visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
 
-        for i in range(1):
-            random_gameId, random_playId = random.choice(list(data_2022.keys()))
-            test_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == random_gameId) & (passes_behind_los_play_data['playId'] == random_playId)]
-            passes_2022_dict = data_processing.get_relevant_frames(test_data, passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
+    #     for i in range(1):
+    #         random_gameId, random_playId = random.choice(list(data_2022.keys()))
+    #         test_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == random_gameId) & (passes_behind_los_play_data['playId'] == random_playId)]
+    #         passes_2022_dict = data_processing.get_relevant_frames(test_data, passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
 
-            for play,play_frames in passes_2022_dict.items():
-                game_id, play_id = play
-                play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
-                print(play_frames)
-                visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+    #         for play,play_frames in passes_2022_dict.items():
+    #             game_id, play_id = play
+    #             play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
+    #             print(play_frames)
+    #             visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+
+
+
 
 
 

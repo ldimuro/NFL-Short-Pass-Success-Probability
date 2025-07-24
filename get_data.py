@@ -28,3 +28,8 @@ def get_player_play_data(year):
     file_path = f'/Volumes/T7/Machine_Learning/Datasets/NFL/misc/player_play_{year}.csv'
     data = pd.read_csv(file_path)
     return data
+
+def get_game_data(year):
+    file_path = f'/Volumes/T7/Machine_Learning/Datasets/NFL/misc/games_{year}.csv'
+    data = pd.read_csv(file_path)
+    return data

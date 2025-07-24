@@ -122,7 +122,7 @@ def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_e
 
 
 
-def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, player_data):
+def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, player_data: DataFrame):
     # Consolidate all tracking_weeks together
     tracking_data = pd.concat(tracking_data, ignore_index=True)
 
@@ -139,10 +139,10 @@ def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, pla
         game_id = play['gameId']
         play_id = play['playId']
         play_df = tracking_data[(tracking_data['gameId'] == game_id) & (tracking_data['playId'] == play_id)]
-        los = np.round(play_df[play_df['team'] == 'football'].iloc[0]['x'] if play_df['club'].isna().all() else play_df[play_df['club'] == 'football'].iloc[0]['x'])
+        los = np.round(play_df[play_df['team'] == 'football'].iloc[0]['x'] if ('club' not in play_df.columns or play_df['club'].isna().all()) else play_df[play_df['club'] == 'football'].iloc[0]['x'])
         receiver_id, all_22_tracking_features = get_receiver_nflId(play, player_data, tracking_data)
 
-        # print(f"\t{game_id},{play_id}")
+        # print(f"\t{game_id},{play_id} receiver: {receiver_id}")
 
         # receiver_id = None indicates pre-processing issue, so just skip
         try:
@@ -154,17 +154,21 @@ def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, pla
                 ].iloc[0]['x']
             )
 
+            # print('\treceiver_x_at_pass:', receiver_x_at_pass)
+            # print('\tLoS:', los)
+
             # Only store plays in which the receiver is at or behind the LoS at the moment of the pass
             if receiver_x_at_pass - los <= 2:
-                print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult']}")
+                print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['yardsGained' if 'yardsGained' in play.index else 'playResult']}") #prePenaltyPlayResult
                 candidate_plays[(game_id, play_id)] = {'receiver_id': receiver_id, 
                                                        'tracking_data': all_22_tracking_features,
                                                        'los': los,
                                                        'receiver_x': receiver_x_at_pass,
                                                        'down': play['down'],
-                                                       'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult'],
+                                                       'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'playResult'], #prePenaltyPlayResult
                                                        'label': estimate_play_success(play)}
         except:
+            print('skipped!')
             skipped += 1
             continue
     
@@ -219,10 +223,19 @@ def get_receiver_nflId(row, player_data: DataFrame, tracking_data: DataFrame):
 
         # Filter to only include players on offense who could receive the ball
         eligible_positions = ['WR', 'TE', 'RB', 'FB']
+        # print('player_data:\n', player_data)
+
         skill_players_df = player_data[player_data['position'].isin(eligible_positions)]
+
+        # Drop 'position' if it exists to prevent merge conflicts
+        if 'position' in play_df.columns:
+            play_df = play_df.drop(columns=['position'])
         merged_df = play_df.merge(skill_players_df[['nflId', 'position']], on='nflId', how='left')
+        # print(merged_df)
+
         possible_targets_df = merged_df[merged_df['position'].isin(eligible_positions)]
-        possible_targets_df = possible_targets_df[(possible_targets_df['frameId'] == pass_forward_frame_id) & (possible_targets_df['club'] == team)]
+        possible_targets_df = possible_targets_df[(possible_targets_df['frameId'] == pass_forward_frame_id)]# & (possible_targets_df['club'] == team)]
+        # print('possible_targets:\n', possible_targets_df)
 
         # Check for matches in this small subset, instead of all_players
         matches_in_possible_targets = matches[matches['nflId'].isin(possible_targets_df['nflId'])]['nflId'].values
@@ -289,7 +302,7 @@ def create_input_tensor(play_data, player_data):
 
         player_vel[player_nflId] = (player_v_x, player_v_y)
 
-    # Calculate relative positions and speeds of every defender to receiver
+    # Calculate relative positions and velocities of every defender to receiver
     def_rel_pos = {}
     def_rel_vel = {}
     for i,defender in def_players.iterrows():
@@ -301,7 +314,7 @@ def create_input_tensor(play_data, player_data):
         def_rel_vel[defender['nflId']] = rel_vel
 
     
-    # Calculate relative positions and speeds of every pair of offensive/defensive players (excluding receiver)
+    # Calculate relative positions and velocities of every pair of offensive/defensive players (excluding receiver)
     off_def_pair_pos = {}
     off_def_pair_vel = {}
     for off_player, def_player in product(off_players.itertuples(index=False), def_players.itertuples(index=False)):
@@ -371,6 +384,10 @@ def create_input_tensor(play_data, player_data):
 
     return tensor
 
+
+def get_team(game_id, side):
+
+    pass
 
 
     
