@@ -110,25 +110,25 @@ def main():
     count_true = sum(1 for v in total_data.values() if v.get('label') is True)
     print(f'play success ratio: {count_true/len(total_data)*100:.2f}% ({count_true}/{len(total_data)})')
 
-    # all_players =  pd.concat([all_player_data, all_player_data_2021])
-    # all_players = all_players.drop_duplicates(subset=['nflId'])
-    # input_tensors = []
-    # skipped = []
-    # for play,play_data in total_data.items():
-    #     game_id, play_id = play
+    all_players =  pd.concat([all_player_data, all_player_data_2021])
+    all_players = all_players.drop_duplicates(subset=['nflId'])
+    input_tensors = []
+    skipped = []
+    for play,play_data in total_data.items():
+        game_id, play_id = play
 
-    #     # Occasionally there are more/less than 11 players on each side, catch this error and skip
-    #     try:
-    #         tensor = data_processing.create_input_tensor(play, play_data, all_players)
-    #         input_tensors.append(tensor)
-    #         print(f"created tensor for ({game_id},{play_id})")
-    #     except:
-    #         skipped.append(play)
-    #         print(f"ERROR FOR ({game_id},{play_id})")
+        # Occasionally there are more/less than 11 players on each side, catch this error and skip
+        try:
+            tensor = data_processing.create_input_tensor(play_data, all_players)
+            input_tensors.append(tensor)
+            print(f"created tensor for ({game_id},{play_id})")
+        except:
+            skipped.append(play)
+            print(f"ERROR FOR ({game_id},{play_id})")
 
 
-    # print('skipped:', len(skipped))
-    # print('FINAL TENSOR COUNT:', len(input_tensors)) # 3119 total input tensors
+    print('skipped:', len(skipped))
+    print('FINAL TENSOR COUNT:', len(input_tensors)) # 3119 total input tensors
 
 
 

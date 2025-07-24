@@ -258,23 +258,18 @@ def estimate_play_success(play_data: DataFrame):
 
 
 
-def create_input_tensor(play, play_data, player_data):
-    # print('receiver:', play_data['receiver_id'])
-    # print(play_data)
-
+def create_input_tensor(play_data, player_data):
     down = play_data['down']
-    down_norm = down / 4.0
+    down_norm = down / 3.0  # 1st, 2nd, 3rd/4th downs
 
     players_on_field = play_data['tracking_data']
     players_on_field = players_on_field[players_on_field['nflId'].notna()] # remove 'football' from tracking_data
 
     receiver_id = play_data['receiver_id']
     receiver = players_on_field[players_on_field['nflId'] == receiver_id].iloc[0]
-    # print('receiver:\n', receiver)
 
     # Remove the receiver from the tracking_data
     players_without_receiver = players_on_field[players_on_field['nflId'] != receiver_id]
-    # print(f'players_without_receiver ({len(players_without_receiver)}):\n', players_without_receiver)
 
     # Merge tracking_data with player positions in player_data
     merged_df = players_without_receiver.merge(player_data[['nflId', 'position']], on='nflId', how='left')
@@ -282,9 +277,6 @@ def create_input_tensor(play, play_data, player_data):
     #  Filter offensive and defensive players based on position
     off_players = merged_df[merged_df['position'].isin(constants.OFF_POSITIONS)].copy()
     def_players = merged_df[merged_df['position'].isin(constants.DEF_POSITIONS)].copy()
-
-    # print(f'off_players ({len(off_players)}):\n', off_players)
-    # print(f'def_players ({len(def_players)}):\n', def_players)
 
     # Get velocity of every player (including the receiver)
     player_vel = {}
@@ -303,7 +295,7 @@ def create_input_tensor(play, play_data, player_data):
     for i,defender in def_players.iterrows():
         rel_pos = (defender['x'] - receiver['x'], defender['y'] - receiver['y'])
         rel_vel = (player_vel[defender['nflId']][0] - player_vel[receiver_id][0], 
-                     player_vel[defender['nflId']][1] - player_vel[receiver_id][1])
+                   player_vel[defender['nflId']][1] - player_vel[receiver_id][1])
 
         def_rel_pos[defender['nflId']] = rel_pos
         def_rel_vel[defender['nflId']] = rel_vel
@@ -315,7 +307,7 @@ def create_input_tensor(play, play_data, player_data):
     for off_player, def_player in product(off_players.itertuples(index=False), def_players.itertuples(index=False)):
         diff_pos = (off_player.x - def_player.x, off_player.y - def_player.y)
         diff_vel = (player_vel[off_player.nflId][0] - player_vel[def_player.nflId][0], 
-                     player_vel[off_player.nflId][1] - player_vel[def_player.nflId][1])
+                    player_vel[off_player.nflId][1] - player_vel[def_player.nflId][1])
         
         off_def_pair_pos[(off_player.nflId, def_player.nflId)] = diff_pos
         off_def_pair_vel[(off_player.nflId, def_player.nflId)] = diff_vel
@@ -330,13 +322,12 @@ def create_input_tensor(play, play_data, player_data):
     # 3) def velocity relative to receiver (v_x, v_y)
     # 4) off - def position (x,y)
     # 5) off - def velocity (v_x, v_y)
-    # 6) down (0.25, 0.5, 0.75, or 1.0)
+    # 6) down (0.33, 0.67, 1.0) - 1st/2nd/3rd-4th downs
 
-    num_features = (5 * 2) + 1 # multiply by 2 because there is an (x,y) associated with each feature + feature for "down"
+    num_features = (5 * 2) + 1  # 5 features with (x,y) values + feature for "down"
     def_count = 11
     off_count = 10
     tensor = np.zeros((num_features, def_count, off_count))
-    # print('tensor:', tensor.shape)
 
     for i, def_player in enumerate(def_players.itertuples(index=False)):
         def_nflId = def_player.nflId
@@ -376,12 +367,9 @@ def create_input_tensor(play, play_data, player_data):
             tensor[9, i, j] = off_def_rel_vel_y
 
     # Channel 10: normalized down value
-    tensor[10, i, j] = down_norm
+    tensor[10, :, :] = down_norm
 
     return tensor
-
-
-
 
 
 
