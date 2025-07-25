@@ -18,6 +18,7 @@ import random
 import math
 import constants
 import pickle
+from cnn import cross_validation
 
 
 def set_seed(seed_value=42):
@@ -30,24 +31,22 @@ def set_seed(seed_value=42):
 
 def main():
     print('running main')
-    # set_seed()
+    set_seed()
 
-    is_testing = True
     is_data_processing = False
 
     all_player_data = get_data.get_player_data(year=2022)
     all_player_data_2021 = get_data.get_player_data(year=2021)
     all_player_data_2018 = get_data.get_player_data(year=2018)
 
-    # game_data_2018 = get_data.get_game_data(year=2018)
 
 
     if is_data_processing:
 
         # Obtain all play and tracking data
-        all_tracking_data = get_data.get_tracking_data(year=2022, week_start=1, week_end=1)
-        all_tracking_data_2021 = get_data.get_tracking_data(year=2021, week_start=1, week_end=1)
-        all_tracking_data_2018 = get_data.get_tracking_data(year=2018, week_start=1, week_end=17)
+        all_tracking_data = get_data.get_tracking_data(year=2022, week_start=1, week_end=1)         # 9
+        all_tracking_data_2021 = get_data.get_tracking_data(year=2021, week_start=1, week_end=1)    # 8
+        all_tracking_data_2018 = get_data.get_tracking_data(year=2018, week_start=1, week_end=17)   # 17
         # all_tracking_df = pd.concat(all_tracking_data, ignore_index=True)
         # all_tracking_df_2021 = pd.concat(all_tracking_data_2021, ignore_index=True)
         all_play_data = get_data.get_play_data(year=2022)
@@ -102,26 +101,44 @@ def main():
         # behind_los_play_data_2021 = data_processing.get_data_at_pass_forward(passing_play_data_2021, passing_tracking_data_2021, all_player_data_2021)
         # print(f'PLAYS EXTRACTED {len(behind_los_play_data_2021)}/{len(passing_play_data_2021)}')
         # data_processing.save_data(behind_los_play_data_2021, 'behind_los_play_data_2021_weeks1-8')
+        # behind_los_play_data_2021_augmented = data_processing.augment_data(behind_los_play_data_2021)
+        # data_processing.save_data(behind_los_play_data_2021_augmented, 'behind_los_play_data_2021_weeks1-8_augmented')
 
         # behind_los_play_data_2022 = data_processing.get_data_at_pass_forward(passes_behind_los_play_data, passes_behind_los_tracking_data, all_player_data)
         # print(f'PLAYS EXTRACTED {len(behind_los_play_data_2022)}/{len(passes_behind_los_play_data)}')
         # data_processing.save_data(behind_los_play_data_2022, 'behind_los_play_data_2022_weeks1-9')
+        # behind_los_play_data_2022_augmented = data_processing.augment_data(behind_los_play_data_2022)
+        # data_processing.save_data(behind_los_play_data_2022_augmented, 'behind_los_play_data_2022_weeks1-9_augmented')
 
         # behind_los_play_data_2018 = data_processing.get_data_at_pass_forward(passing_play_data_2018, passing_tracking_data_2018, all_player_data_2018)
         # print(f'PLAYS EXTRACTED {len(behind_los_play_data_2018)}/{len(passing_play_data_2018)}')
         # data_processing.save_data(behind_los_play_data_2018, 'behind_los_play_data_2018_weeks1-17')
+        # behind_los_play_data_2018_augmented = data_processing.augment_data(behind_los_play_data_2018)
+        # data_processing.save_data(behind_los_play_data_2018_augmented, 'behind_los_play_data_2018_weeks1-17_augmented')
 
 
 
-    data_2021 = data_processing.get_data('behind_los_play_data_2021_centered_weeks1-8')  # 1142 samples
-    data_2022 = data_processing.get_data('behind_los_play_data_2022_centered_weeks1-9')  # 1985 samples
-    data_2018 = data_processing.get_data('behind_los_play_data_2018_centered_weeks1-17') # 4565 samples
-    total_data = data_2021 | data_2022 | data_2018
+    data_2021 = data_processing.get_data('behind_los_play_data_2021_weeks1-8')  # 1142 samples
+    data_2022 = data_processing.get_data('behind_los_play_data_2022_weeks1-9')  # 1985 samples
+    data_2018 = data_processing.get_data('behind_los_play_data_2018_weeks1-17') # 4565 samples
+    data_2021_augm = data_processing.get_data('behind_los_play_data_2021_weeks1-8_augmented')
+    data_2022_augm = data_processing.get_data('behind_los_play_data_2022_weeks1-9_augmented')
+    data_2018_augm = data_processing.get_data('behind_los_play_data_2018_weeks1-17_augmented')
+    total_data = data_2021 | data_2022 | data_2018 | data_2021_augm | data_2022_augm | data_2018_augm
 
     print('data_2021:', len(data_2021))
     print('data_2022:', len(data_2022))
     print('data_2018:', len(data_2018))
     print('TOTAL DATA:', len(total_data))
+
+    # print('AUG:\n', list(data_2021_augm)[5], data_2021_augm[list(data_2021_augm)[5]])
+    # print('NON-AUG:\n', list(data_2021)[5], data_2021[list(data_2021)[5]])
+
+    # print('AUG:\n', list(data_2022_augm)[5], data_2022_augm[list(data_2022_augm)[5]])
+    # print('NON-AUG:\n', list(data_2022)[5], data_2022[list(data_2022)[5]])
+
+    # print('AUG:\n', list(data_2018_augm)[5], data_2018_augm[list(data_2018_augm)[5]])
+    # print('NON-AUG:\n', list(data_2018)[5], data_2018[list(data_2018)[5]])
 
     # print(total_data[(2021092604,3981)])
 
@@ -160,23 +177,28 @@ def main():
     # print('FINAL TENSOR COUNT:', len(input_tensors)) # 7683 total input tensors
     # print('FINAL LABEL COUNT:', len(labels))
 
-    # data_processing.save_data(input_tensors, 'total_behind_los_pass_input_tensors')
-    # data_processing.save_data(labels, 'total_behind_los_pass_labels')
+    # data_processing.save_data(input_tensors, 'total_behind_los_pass_aug_input_tensors')
+    # data_processing.save_data(labels, 'total_behind_los_pass_aug_labels')
 
 
 
 
-    input_tensors = data_processing.get_data('total_behind_los_pass_input_tensors')
+    input_tensors = data_processing.get_data('total_behind_los_pass_aug_input_tensors')
     print('TOTAL INPUT TENSORS:', len(input_tensors))
 
-    labels = data_processing.get_data('total_behind_los_pass_labels')
+    labels = data_processing.get_data('total_behind_los_pass_aug_labels')
     print('TOTAL INPUT LABELS:', len(labels))
+
 
     x = torch.from_numpy(np.array(input_tensors, dtype=np.float32))
     print('x:', x.shape)
 
     y = torch.from_numpy(np.array(labels, dtype=np.int64))
     print('y:', y.shape)
+
+
+    mean_acc, std_acc = cross_validation(x, y)
+    print(f"Mean Cross-Val accuracy: {mean_acc:.3f} += {std_acc:.3f}")
 
 
 
@@ -221,39 +243,6 @@ def main():
 
 
 
-
-
-    
-
-    # passes_behind_los_play_data = passes_behind_los_play_data[passes_behind_los_play_data['gameId'] <= 2022091200] # Week 1 only
-    # test_passes_behind_los_plays = random.sample(range(len(passes_behind_los_play_data)), sample_num)
-    # passes_behind_los_frames_dict = data_processing.get_relevant_frames(passes_behind_los_play_data.iloc[test_passes_behind_los_plays], passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
-
-    # passing_play_data_2021 = passing_play_data_2021[(passing_play_data_2021['gameId'] <= 2021091300)] # Week 1 only
-    # test_pass_plays_2021 = random.sample(range(len(passing_play_data_2021)), sample_num)
-    # passes_2021_dict = data_processing.get_relevant_frames(passing_play_data_2021.iloc[test_pass_plays_2021], all_tracking_data_2021, start_events=[constants.BALL_SNAP], end_events=[constants.END])
-
-
-
-    # passing_play_data = passing_play_data[passing_play_data['gameId'] <= 2022091200] # Week 1 only
-
-    # random_tests = random.sample(range(len(passing_play_data)), sample_num)
-    # random_test_passing_plays = passing_play_data.iloc[random_tests]
-    # use_cases = [(2022091101, 1879), (2022091109, 1041), (2022091108, 614), (2022091101, 1492), (2022091101, 1166),
-    #             (2022091105, 2817), (2022091108, 2799), (2022091107, 1642), (2022091106, 3050), (2022091111, 336),
-    #             (2022091105, 2817), (2022091104, 2952)]
-
-    # # Filter all passing_play_data to use_cases
-    # test_case_set = set(use_cases)
-    # use_case_plays = passing_play_data[
-    #     passing_play_data.apply(lambda row: (row['gameId'], row['playId']) in test_case_set, axis=1)
-    # ]
-
-    # plays_to_process = pd.concat([random_test_passing_plays, use_case_plays], ignore_index=True)
-    
-    # # Create GIFs of 1 randomly selected play
-    # play_to_gif = random_test_passing_plays
-    # passing_frames_dict = data_processing.get_relevant_frames(play_to_gif, passing_tracking_data, start_events=['line_set'], end_events=['END'])
 
 
 
