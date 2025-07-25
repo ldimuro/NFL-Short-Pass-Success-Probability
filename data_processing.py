@@ -36,6 +36,7 @@ def normalize_field_direction(tracking_data):
 
     return normalized_tracking_data
 
+
 def normalize_to_center(tracking_data: DataFrame):
     normalized_weeks = []
     
@@ -61,6 +62,38 @@ def normalize_to_center(tracking_data: DataFrame):
         normalized_weeks.append(pd.concat(normalized_plays, ignore_index=True))
 
     return normalized_weeks
+
+
+def flip_play_and_jitter(tracking_frame: DataFrame, noise_scale=0.2):
+    track_frame_df = tracking_frame.copy()
+
+    # 1. Horizontal mirror
+    track_frame_df['x']  = constants.FIELD_LENGTH - track_frame_df['x']
+    track_frame_df['o']  = (360 - track_frame_df['o']) % 360
+    track_frame_df['dir'] = (360 - track_frame_df['dir']) % 360
+
+    # 2. Small jitter
+    noise = np.random.normal(0, noise_scale, size=(len(track_frame_df), 4))
+    track_frame_df['x']  += noise[:, 0]
+    track_frame_df['y']  += noise[:, 1]
+    track_frame_df['o']  = (track_frame_df['o']  + noise[:, 2]) % 360
+    track_frame_df['dir'] = (track_frame_df['dir'] + noise[:, 3]) % 360
+
+    return track_frame_df
+
+
+def augment_data(data):
+    data_mirrored_jittered = {}#data.copy()
+    
+    for play,play_data in data.items():
+        game_id, play_id = play
+        play_id += 0.1  # add 0.1 to ID to mark it as "augmented"
+
+        flipped_jittered_tracking_data = flip_play_and_jitter(play_data['tracking_data'])
+        data_mirrored_jittered[(game_id, play_id)] = play_data
+        data_mirrored_jittered[(game_id, play_id)]['tracking_data'] = flipped_jittered_tracking_data
+
+    return data_mirrored_jittered
 
 
 
@@ -161,12 +194,13 @@ def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, pla
             if receiver_x_at_pass - los <= 2:
                 print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['yardsGained' if 'yardsGained' in play.index else 'playResult']}") #prePenaltyPlayResult
                 candidate_plays[(game_id, play_id)] = {'receiver_id': receiver_id, 
-                                                       'tracking_data': all_22_tracking_features,
                                                        'los': los,
                                                        'receiver_x': receiver_x_at_pass,
                                                        'down': play['down'],
+                                                       'yardsToGo': play['yardsToGo'],
                                                        'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'playResult'], #prePenaltyPlayResult
-                                                       'label': estimate_play_success(play)}
+                                                       'label': estimate_play_success(play),
+                                                       'tracking_data': all_22_tracking_features,}
         except:
             print('skipped!')
             skipped += 1
@@ -270,10 +304,18 @@ def estimate_play_success(play_data: DataFrame):
     return is_success
 
 
+def normalize_yards_to_go(yards_to_go):
+    min = 0.5
+    max = 30
+    norm = (yards_to_go - min) / (max - min)
+    return norm
+
 
 def create_input_tensor(play_data, player_data):
     down = play_data['down']
     down_norm = down / 3.0  # 1st, 2nd, 3rd/4th downs
+
+    yards_to_go_norm = normalize_yards_to_go(play_data['yardsToGo'])
 
     players_on_field = play_data['tracking_data']
     players_on_field = players_on_field[players_on_field['nflId'].notna()] # remove 'football' from tracking_data
@@ -340,8 +382,9 @@ def create_input_tensor(play_data, player_data):
     # 4) off - def position (x,y)
     # 5) off - def velocity (v_x, v_y)
     # 6) down (0.33, 0.67, 1.0) - 1st/2nd/3rd-4th downs
+    # 7) yardsToGo (normalized)
 
-    num_features = (5 * 2) + 1  # 5 features with (x,y) values + feature for "down"
+    num_features = (5 * 2) + 2  # 5 features with (x,y) values + feature for "down" and "yardsToGo"
     def_count = 11
     off_count = 10
     tensor = np.zeros((num_features, def_count, off_count))
@@ -386,15 +429,11 @@ def create_input_tensor(play_data, player_data):
     # Channel 10: normalized down value
     tensor[10, :, :] = down_norm
 
+    # Channel 11: normalized yardsToGo
+    tensor[11, :, :] = yards_to_go_norm
+
     return tensor
 
-
-def get_team(game_id, side):
-
-    pass
-
-
-    
 
 def save_data(data, file_name):
     with open(f"{file_name}.pkl", 'wb') as f:
