@@ -54,12 +54,15 @@ def accuracy(model, loader):
     return correct / total
 
 
-def cross_validation(x, y):
-    cross_val = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+def cross_validation(x, y, num_epochs=20, k=5):
+    cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
     scores = []
 
     all_train_losses, all_val_losses = [], []
     all_train_accs, all_val_accs = [], []
+
+    best_acc = 0.0
+    best_state = None
 
     for fold,(train_i, val_i) in enumerate(cross_val.split(x, y)):
         print('FOLD:', fold+1)
@@ -79,13 +82,12 @@ def cross_validation(x, y):
         train_losses, val_losses = [], []
         train_accs, val_accs = [], []
 
-        epochs = 20
+        epochs = num_epochs
         model.train()
         for epoch in range(epochs):
             print('\tEPOCH', epoch+1)
             total_loss = 0
             correct, total = 0, 0
-
 
             for xb,yb in train_dataloader:
                 optimizer.zero_grad()
@@ -104,9 +106,7 @@ def cross_validation(x, y):
             train_losses.append(total_loss / len(train_dataloader))
             train_accs.append(correct / total)
 
-        # Evaluate accuracy
-        # scores.append(accuracy(model, val_dataloader))
-
+        
             # Validation eval
             model.eval()
             val_loss = 0
@@ -123,11 +123,20 @@ def cross_validation(x, y):
             val_losses.append(val_loss / len(val_dataloader))
             val_accs.append(val_correct / val_total)
 
+            # Update best model across all folds
+            val_acc = val_correct / val_total
+            if val_acc > best_acc:
+                best_acc = val_acc
+                best_state = model.state_dict()
+
         scores.append(val_accs[-1])
         all_train_losses.append(train_losses)
         all_val_losses.append(val_losses)
         all_train_accs.append(train_accs)
         all_val_accs.append(val_accs)
+
+        # Evaluate accuracy
+        # scores.append(accuracy(model, val_dataloader))
 
     # Plot average over folds
     avg_train_loss = np.mean(all_train_losses, axis=0)
@@ -148,7 +157,7 @@ def cross_validation(x, y):
     plt.subplot(1, 2, 2)
     plt.plot(avg_train_acc, label='Train Acc')
     plt.plot(avg_val_acc, label='Val Acc')
-    plt.title(f"Accuracy (Max={max(avg_val_acc)*100:.2f}%)")
+    plt.title(f"Accuracy (Best={best_acc*100:.2f}%)")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
     plt.legend()
@@ -157,5 +166,5 @@ def cross_validation(x, y):
     plt.savefig('train_val_loss_accuracy.png')
 
 
-    return np.mean(scores), np.std(scores)
+    return np.mean(scores), np.std(scores), best_acc, best_state
 
