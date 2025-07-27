@@ -437,10 +437,8 @@ def create_input_tensor(play_data, player_data):
 
 
 def get_tensor_batch(input_data, all_players):
-    # all_players =  pd.concat([all_player_data, all_player_data_2021, all_player_data_2018])
-    # all_players = all_players.drop_duplicates(subset=['nflId'])
-    input_tensors = []
-    labels = []
+    input_tensors = {}
+    labels = {}
     skipped = []
     for play,play_data in input_data.items():
         game_id, play_id = play
@@ -449,17 +447,17 @@ def get_tensor_batch(input_data, all_players):
         try:
             # Create input tensor
             tensor = create_input_tensor(play_data, all_players)
-            input_tensors.append(tensor)
+            input_tensors[play] = tensor
 
             # Save corresponding label to input tensor
             label = int(play_data['label'])
-            labels.append(label)
+            labels[play] = label
 
             print(f"created tensor+label for ({game_id},{play_id})")
 
-        except:
+        except Exception as e:
             skipped.append(play)
-            print(f"ERROR FOR ({game_id},{play_id})")
+            print(f"ERROR FOR ({game_id},{play_id}): {e}")
 
     print('skipped:', len(skipped))
     print('FINAL TENSOR COUNT:', len(input_tensors)) # 7683 total input tensors
