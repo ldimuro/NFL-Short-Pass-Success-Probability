@@ -435,6 +435,41 @@ def create_input_tensor(play_data, player_data):
     return tensor
 
 
+
+def get_tensor_batch(input_data, all_players):
+    # all_players =  pd.concat([all_player_data, all_player_data_2021, all_player_data_2018])
+    # all_players = all_players.drop_duplicates(subset=['nflId'])
+    input_tensors = []
+    labels = []
+    skipped = []
+    for play,play_data in input_data.items():
+        game_id, play_id = play
+
+        # Occasionally there are more/less than 11 players on each side, catch this error and skip
+        try:
+            # Create input tensor
+            tensor = create_input_tensor(play_data, all_players)
+            input_tensors.append(tensor)
+
+            # Save corresponding label to input tensor
+            label = int(play_data['label'])
+            labels.append(label)
+
+            print(f"created tensor+label for ({game_id},{play_id})")
+
+        except:
+            skipped.append(play)
+            print(f"ERROR FOR ({game_id},{play_id})")
+
+    print('skipped:', len(skipped))
+    print('FINAL TENSOR COUNT:', len(input_tensors)) # 7683 total input tensors
+    print('FINAL LABEL COUNT:', len(labels))
+
+    return input_tensors, labels
+
+
+
+
 def save_data(data, file_name):
     with open(f"{file_name}.pkl", 'wb') as f:
         pickle.dump(data, f)
