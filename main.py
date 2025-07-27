@@ -18,7 +18,8 @@ import random
 import math
 import constants
 import pickle
-from cnn import cross_validation
+from cnn import cross_validation, BasicCNN
+from torch.utils.data import TensorDataset, DataLoader
 
 
 def set_seed(seed_value=42):
@@ -31,9 +32,9 @@ def set_seed(seed_value=42):
 
 def main():
     print('running main')
-    set_seed()
+    # set_seed()
 
-    is_data_processing = False
+    is_data_processing = True
 
     all_player_data = get_data.get_player_data(year=2022)
     all_player_data_2021 = get_data.get_player_data(year=2021)
@@ -45,8 +46,8 @@ def main():
 
         # Obtain all play and tracking data
         all_tracking_data = get_data.get_tracking_data(year=2022, week_start=1, week_end=1)         # 9
-        all_tracking_data_2021 = get_data.get_tracking_data(year=2021, week_start=1, week_end=1)    # 8
-        all_tracking_data_2018 = get_data.get_tracking_data(year=2018, week_start=1, week_end=17)   # 17
+        all_tracking_data_2021 = get_data.get_tracking_data(year=2021, week_start=1, week_end=8)    # 8
+        all_tracking_data_2018 = get_data.get_tracking_data(year=2018, week_start=1, week_end=1)   # 17
         # all_tracking_df = pd.concat(all_tracking_data, ignore_index=True)
         # all_tracking_df_2021 = pd.concat(all_tracking_data_2021, ignore_index=True)
         all_play_data = get_data.get_play_data(year=2022)
@@ -145,60 +146,156 @@ def main():
     count_true = sum(1 for v in total_data.values() if v.get('label') is True)
     print(f'play success ratio: {count_true/len(total_data)*100:.2f}% ({count_true}/{len(total_data)})')
 
+    # - (2022091105, 2544) - No Success
+    # - (2022091112, 917)  - Success
+    # - (2021102403, 3496) - Success
+    # - (2021100303, 1951) - No Success
+    # - (2021102410, 3434) - No Success
+    # - (2021091206, 3353) - MAIN EXAMPLE FOR VISUALIZATION, ADD INDICATOR FOR BOTH RECEIVERS (will need to manually add)
+    withheld_use_case_plays = [(2022091105, 2544), (2022091112, 917), (2021100303, 1951), (2021102410, 3434)]
+
+    # Randomly select 59 successful plays to use as testing set
+    success_plays = [key for key, value in total_data.items() if value.get('label') is True]
+    withheld_success_plays = random.sample(success_plays, 59)
+
+    # Randomly select 41 unsuccessful plays to use as testing set
+    no_success_plays = [key for key, value in total_data.items() if value.get('label') is True]
+    withheld_no_success_plays = random.sample(no_success_plays, 41)
+
+    withheld_plays = withheld_success_plays + withheld_no_success_plays + withheld_use_case_plays
+    
+
+    # PERFECT EXAMPLE OF FAILURE PREDICTION: (2022091105, 2544)
+    # PERFECT EXAMPLE OF SUCCESS PREDICTION: (2022091112, 917)
+    #   - The moment #33 passes by #55 moving in the opposite direction,
+    #     the Short Pass Success Probability (SPSP) shoots up
+
+    # REMOVE TEST SAMPLE:
+    # test_sample = (2021100303,1951)#(2022091100, 458) #(2022091104,3204) #(2022091110, 514)
+    # test_sample_aug = (2021100303,1951.1)#(2022091100, 458.1)#(2022091104,3204.1)#(2022091110, 514.1)
+    test_sample = random.choice(list(data_2021.keys()))
+    test_sample_aug = (test_sample[0], test_sample[1]+0.1)
+
+    print(total_data[test_sample])
+    withheld_sample = total_data[test_sample]
+    withheld_sample_aug = total_data[test_sample_aug]
+    withheld_data = {}
+    total_data.pop(test_sample, None)
+    total_data.pop(test_sample_aug, None)
+
+    withheld_data[test_sample] = withheld_sample
+    withheld_data[test_sample_aug] = withheld_sample_aug
+    print('TOTAL DATA mod:', len(total_data))
+    print('WITHHELD DATA:', len(withheld_data))
+
+    # Extract every frame of the play
+    test_game_id, test_play_id = test_sample
+    test_play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == test_game_id) & (passing_play_data_2021['playId'] == test_play_id)]
+    print(test_play_data)
+    test_play_frames = data_processing.get_relevant_frames(test_play_data, passing_tracking_data_2021, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_FORWARD])
+    print(test_play_frames[test_sample])
+
+    test_play_frames_data = {}
+    z = test_play_frames[test_sample]
+    min_frame = test_play_frames[test_sample]['frameId'].min()
+    max_frame = test_play_frames[test_sample]['frameId'].max()
+    print(f"Min:{min_frame}, Max:{max_frame}")
+    for frame_id in range(min_frame, max_frame+1):
+        data = withheld_data[test_sample].copy()
+        data['tracking_data'] = z[z['frameId'] == frame_id]
+        test_play_frames_data[(test_game_id, test_play_id+(frame_id*0.001))] = data
+
+    print('TOTAL DATA FOR PLAY:', len(test_play_frames_data))
+    # print(test_play_frames_data)
+
+    
 
 
 
-    # all_players =  pd.concat([all_player_data, all_player_data_2021, all_player_data_2018])
-    # all_players = all_players.drop_duplicates(subset=['nflId'])
-    # input_tensors = []
-    # labels = []
-    # skipped = []
-    # for play,play_data in total_data.items():
-    #     game_id, play_id = play
 
-    #     # Occasionally there are more/less than 11 players on each side, catch this error and skip
-    #     try:
-    #         # Create input tensor
-    #         tensor = data_processing.create_input_tensor(play_data, all_players)
-    #         input_tensors.append(tensor)
+    all_players =  pd.concat([all_player_data, all_player_data_2021, all_player_data_2018])
+    all_players = all_players.drop_duplicates(subset=['nflId'])
+    input_tensors, labels = data_processing.get_tensor_batch(total_data, all_players)
+    data_processing.save_data(input_tensors, 'total_behind_los_pass_aug_withheld_input_tensors')
+    data_processing.save_data(labels, 'total_behind_los_pass_aug_withheld_labels')
 
-    #         # Save corresponding label to input tensor
-    #         label = int(play_data['label'])
-    #         labels.append(label)
-
-    #         print(f"created tensor+label for ({game_id},{play_id})")
+    test_input_tensors, test_labels = data_processing.get_tensor_batch(test_play_frames_data, all_players)
+    data_processing.save_data(test_input_tensors, 'test_behind_los_pass_aug_input_tensors')
+    data_processing.save_data(test_labels, 'test_behind_los_pass_aug_labels')
 
 
-    #     except:
-    #         skipped.append(play)
-    #         print(f"ERROR FOR ({game_id},{play_id})")
-
-    # print('skipped:', len(skipped))
-    # print('FINAL TENSOR COUNT:', len(input_tensors)) # 7683 total input tensors
-    # print('FINAL LABEL COUNT:', len(labels))
-
-    # data_processing.save_data(input_tensors, 'total_behind_los_pass_aug_input_tensors')
-    # data_processing.save_data(labels, 'total_behind_los_pass_aug_labels')
+    
 
 
 
 
-    input_tensors = data_processing.get_data('total_behind_los_pass_aug_input_tensors')
+    input_tensors = data_processing.get_data('total_behind_los_pass_aug_withheld_input_tensors')
     print('TOTAL INPUT TENSORS:', len(input_tensors))
-
-    labels = data_processing.get_data('total_behind_los_pass_aug_labels')
+    labels = data_processing.get_data('total_behind_los_pass_aug_withheld_labels')
     print('TOTAL INPUT LABELS:', len(labels))
-
-
     x = torch.from_numpy(np.array(input_tensors, dtype=np.float32))
     print('x:', x.shape)
-
     y = torch.from_numpy(np.array(labels, dtype=np.int64))
     print('y:', y.shape)
 
+    test_input_tensors = data_processing.get_data('test_behind_los_pass_aug_input_tensors')
+    test_labels = data_processing.get_data('test_behind_los_pass_aug_labels')
+    test_x = torch.from_numpy(np.array(test_input_tensors, dtype=np.float32))
+    test_y = torch.from_numpy(np.array(test_labels, dtype=np.float32))
+    print('test_x:', test_x.shape)
+    print('test_y:', test_y.shape)
 
-    mean_acc, std_acc = cross_validation(x, y)
-    print(f"Mean Cross-Val accuracy: {mean_acc:.3f} += {std_acc:.3f}")
+
+    # TRAIN CNN
+    seeds = [42]#, 215, 23, 64]
+    all_mean_acc = []
+    all_std_acc = []
+    for seed in seeds:
+        set_seed(seed)
+        mean_acc, std_acc, best_acc, best_state = cross_validation(x, y)
+        print(f"Mean Cross-Val accuracy: {mean_acc:.3f} += {std_acc:.3f}")
+        print(f"Best Accuracy: {best_acc*100:.2f}%")
+
+        all_mean_acc.append(mean_acc)
+        all_std_acc.append(std_acc)
+
+    print(f"TOTAL {len(seeds)}-SEED MEAN ACC: {np.mean(all_mean_acc)*100:.2f}% (MEAN STD: {np.mean(all_std_acc)})")
+
+    # SAVE BEST STATE CNN
+    best_model = BasicCNN()
+    best_model.load_state_dict(best_state)   # best weights
+    torch.save(best_model.state_dict(), 'behind_los_success_withheld_model.pt')
+
+    # # LOAD BEST STATE OF CNN
+    test_model = BasicCNN()
+    test_model.load_state_dict(torch.load('behind_los_success_withheld_model.pt', map_location='cpu'))
+    test_model.eval()
+
+    # TEST ON WITHHELD DATA
+    # x_test: tensor shape (N, 12, 11, 10)
+    # y_test: tensor shape (N,)
+    test_dataset   = TensorDataset(test_x, test_y)
+    test_loader    = DataLoader(test_dataset, batch_size=256)
+    with torch.no_grad():
+        logits = test_model(test_x).cpu().numpy()
+        probs  = 1 / (1 + np.exp(-logits))
+        print('PROBS:', probs)
+        preds  = (probs > 0.5).astype(int)
+
+
+    test_acc = np.mean(preds == test_y.cpu().numpy())
+    print("Hold-out accuracy:", test_acc)
+
+    # min_frame = 128
+    # max_frame = 176
+    for i in range(max_frame - min_frame + 1):
+        frame = i+min_frame
+        print(f"FRAME {frame}: {probs[i]}")
+
+    for play,play_frames in test_play_frames.items():
+        game_id, play_id = play
+        play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
+        visualization.create_play_gif(play_data, play_frames, probs, withheld_data[test_sample]['receiver_id'] ,f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
 
 
 
@@ -317,6 +414,42 @@ def main():
     #     game_id, play_id = play
     #     play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
     #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_2021_norm_short', loop=False, zoom=False)
+
+
+
+
+
+
+    # input_tensors = []
+    # labels = []
+    # skipped = []
+    # for play,play_data in total_data.items():
+    #     game_id, play_id = play
+
+    #     # Occasionally there are more/less than 11 players on each side, catch this error and skip
+    #     try:
+    #         # Create input tensor
+    #         tensor = data_processing.create_input_tensor(play_data, all_players)
+    #         input_tensors.append(tensor)
+
+    #         # Save corresponding label to input tensor
+    #         label = int(play_data['label'])
+    #         labels.append(label)
+
+    #         print(f"created tensor+label for ({game_id},{play_id})")
+
+
+    #     except:
+    #         skipped.append(play)
+    #         print(f"ERROR FOR ({game_id},{play_id})")
+
+    # print('skipped:', len(skipped))
+    # print('FINAL TENSOR COUNT:', len(input_tensors)) # 7683 total input tensors
+    # print('FINAL LABEL COUNT:', len(labels))
+
+    # data_processing.save_data(input_tensors, 'total_behind_los_pass_aug_withheld_input_tensors')
+    # data_processing.save_data(labels, 'total_behind_los_pass_aug_withheld_labels')
+
 
 
 
