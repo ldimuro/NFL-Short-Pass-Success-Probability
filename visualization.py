@@ -7,7 +7,7 @@ import imageio.v2 as imageio
 import shutil
 import numpy as np
 
-def plot_frame(frame, play_data, file_name, zoom):
+def plot_frame(frame, play_data, spsp_prob, receiver_id, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
 
     ball = frame[frame['team'] == 'football'].iloc[0] if frame['club'].isna().all() else frame[frame['club'] == 'football'].iloc[0]
@@ -92,7 +92,7 @@ def plot_frame(frame, play_data, file_name, zoom):
 
     # Draw LoS and 1st-Down marker
     # ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE, color='#26248f', linewidth=6 if zoom else 2, zorder=2.2)
-    # ax.axvline(x=constants.DEF_GOALLINE - play_data['absoluteYardlineNumber'] + constants.OFF_GOALLINE + play_data['yardsToGo'], color="#f2d627", linewidth=6 if zoom else 2, zorder=2.2)
+    ax.axvline(x=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=6 if zoom else 2, zorder=2.2)
 
     # Handle team colors
     teams = frame['team'].unique().tolist() if frame['club'].isna().all() else frame['club'].unique().tolist()
@@ -106,6 +106,27 @@ def plot_frame(frame, play_data, file_name, zoom):
     # Add players
     players = frame[frame['team'] != 'football'] if frame['club'].isna().all() else frame[frame['club'] != 'football']
     ax.scatter(players['x'], players['y'], c=players['team' if frame['club'].isna().all() else 'club'].map(color_map), s=1000 if zoom else 60, zorder=3)
+
+    # Add SPSP indicator around receiver
+    receiver_row = frame[frame['nflId'] == receiver_id]
+    if not receiver_row.empty:
+        indicator_color = "#000000"
+        if spsp_prob >= 0.6:
+            indicator_color = '#15FF00'
+        elif spsp_prob < 0.4:
+            indicator_color = '#FF2D2D'
+        else:
+            indicator_color = "#FFA02D"
+
+        ax.scatter(
+            receiver_row['x'], 
+            receiver_row['y'], 
+            s=1100 if zoom else 80, 
+            facecolors='none', 
+            edgecolors=indicator_color, 
+            linewidths=2, 
+            zorder=4
+        )
 
     # Convert angles to radians
     angles = np.deg2rad(players['o'].fillna(0))
@@ -154,7 +175,7 @@ def plot_frame(frame, play_data, file_name, zoom):
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
     play_state = f"{play_data['possessionTeam']} vs. {play_data['defensiveTeam']}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
-    play_state += f", yardsGained: {play_data['playResult'] if '2021' in str(play_data['gameId']) else play_data['yardsGained']}"
+    play_state += f", yardsGained: {play_data['playResult'] if '2021' in str(play_data['gameId']) else play_data['yardsGained']}, {spsp_prob*100:.2f}% SPSP"
     fig.text(0.5, 0.90, play_state, ha='center', fontsize=16)
 
     ax.set_aspect('equal', adjustable='box')
@@ -167,7 +188,7 @@ def plot_frame(frame, play_data, file_name, zoom):
     plt.close()
 
 
-def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False, loop=True):
+def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_id, file_name, zoom=False, loop=True):
     frame_start = frames['frameId'].min()
     frame_end = frames['frameId'].max()
 
@@ -181,9 +202,11 @@ def create_play_gif(play_data, frames: DataFrame, file_name, zoom=False, loop=Tr
     print('creating gif...')
 
     # Create a plot for every frame in the range
+    prob_count = 0
     for frame_id in range(frame_start, frame_end+1):
         frame = frames[frames['frameId'] == frame_id]
-        plot_frame(frame, play_data, file_name, zoom=zoom)
+        plot_frame(frame, play_data, spsp_prob_per_frame[prob_count], receiver_id, file_name, zoom=zoom)
+        prob_count += 1
     
     frames_folder = f'plots/{file_name}'
     gif_output_path = f"play_gifs/{file_name}{'_zoomed' if zoom else ''}.gif"
