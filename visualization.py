@@ -7,7 +7,7 @@ import imageio.v2 as imageio
 import shutil
 import numpy as np
 
-def plot_frame(frame, play_data, spsp_prob, receiver_id, file_name, zoom):
+def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
 
     ball = frame[frame['team'] == 'football'].iloc[0] if frame['club'].isna().all() else frame[frame['club'] == 'football'].iloc[0]
@@ -110,13 +110,14 @@ def plot_frame(frame, play_data, spsp_prob, receiver_id, file_name, zoom):
     # Add SPSP indicator around receiver
     receiver_row = frame[frame['nflId'] == receiver_id]
     if not receiver_row.empty:
-        indicator_color = "#000000"
-        if spsp_prob >= 0.6:
+        if spsp_rolling_avg >= 0.6:
             indicator_color = '#15FF00'
-        elif spsp_prob < 0.4:
+        elif spsp_rolling_avg < 0.4:
             indicator_color = '#FF2D2D'
-        else:
+        elif spsp_rolling_avg >= 0.4 and spsp_rolling_avg < 0.6:
             indicator_color = "#FFA02D"
+        else:
+            indicator_color = "#696969"
 
         ax.scatter(
             receiver_row['x'], 
@@ -175,7 +176,7 @@ def plot_frame(frame, play_data, spsp_prob, receiver_id, file_name, zoom):
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
     play_state = f"{play_data['possessionTeam']} vs. {play_data['defensiveTeam']}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
-    play_state += f", yardsGained: {play_data['playResult'] if '2021' in str(play_data['gameId']) else play_data['yardsGained']}, {spsp_prob*100:.2f}% SPSP"
+    play_state += f", yardsGained: {play_data['playResult'] if '2021' in str(play_data['gameId']) else play_data['yardsGained']}, {spsp_prob*100:.2f}% SPSP ({spsp_rolling_avg*100:.2f}% rolling)"
     fig.text(0.5, 0.90, play_state, ha='center', fontsize=16)
 
     ax.set_aspect('equal', adjustable='box')
@@ -205,7 +206,14 @@ def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_
     prob_count = 0
     for frame_id in range(frame_start, frame_end+1):
         frame = frames[frames['frameId'] == frame_id]
-        plot_frame(frame, play_data, spsp_prob_per_frame[prob_count], receiver_id, file_name, zoom=zoom)
+
+        # Take the rolling average (window size = 3) of SPSP 
+        if prob_count > 1:
+            prob_rolling_avg = sum(spsp_prob_per_frame[prob_count-2:prob_count+1]) / 3
+        else:
+            prob_rolling_avg = 0.0
+
+        plot_frame(frame, play_data, spsp_prob_per_frame[prob_count], prob_rolling_avg, receiver_id, file_name, zoom=zoom)
         prob_count += 1
     
     frames_folder = f'plots/{file_name}'

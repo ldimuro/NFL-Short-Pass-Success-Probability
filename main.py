@@ -207,10 +207,10 @@ def main():
     #     the Short Pass Success Probability (SPSP) shoots up
 
     # REMOVE TEST SAMPLE:
-    test_sample = (2021100303,1951)#(2022091100, 458) #(2022091104,3204) #(2022091110, 514)
-    test_sample_aug = (2021100303,1951.1)#(2022091100, 458.1)#(2022091104,3204.1)#(2022091110, 514.1)
-    # test_sample = random.choice(list(data_2021.keys()))
-    # test_sample_aug = (test_sample[0], test_sample[1]+0.1)
+    # test_sample = (2021100303,1951)#(2022091100, 458) #(2022091104,3204) #(2022091110, 514)
+    # test_sample_aug = (2021100303,1951.1)#(2022091100, 458.1)#(2022091104,3204.1)#(2022091110, 514.1)
+    test_sample = random.choice(list(data_2021.keys()))
+    test_sample_aug = (test_sample[0], test_sample[1]+0.1)
 
     print(total_data[test_sample])
     withheld_sample = total_data[test_sample]
