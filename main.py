@@ -42,6 +42,18 @@ def main():
 
 
 
+
+    # testing = [23.342, 34.634, 32.373, 42.325, 54.235, 64.432, 57.456, 60.536, 62.426, 63.643]
+    # rolling_avg_backward = [np.mean(testing[i-2:i+1]) for i in range(2, len(testing))]
+    # print('testing:', rolling_avg_backward)
+    # for i in range(len(testing)):
+
+
+
+
+
+
+
     if is_data_processing:
 
         # Obtain all play and tracking data
@@ -146,67 +158,72 @@ def main():
     count_true = sum(1 for v in total_data.values() if v.get('label') is True)
     print(f'play success ratio: {count_true/len(total_data)*100:.2f}% ({count_true}/{len(total_data)})')
 
-    # - (2022091105, 2544) - No Success
-    # - (2022091112, 917)  - Success
-    # - (2021102403, 3496) - Success
-    # - (2021100303, 1951) - No Success
-    # - (2021102410, 3434) - No Success
-    # - (2021091206, 3353) - MAIN EXAMPLE FOR VISUALIZATION, ADD INDICATOR FOR BOTH RECEIVERS (will need to manually add)
-    withheld_use_case_plays = [(2022091105, 2544), (2022091112, 917), (2021100303, 1951), (2021102410, 3434)]
 
-    # Randomly select 59 successful plays to use as testing set
-    success_plays = [key for key, value in total_data.items() if value.get('label') is True]
-    withheld_success_plays = random.sample(success_plays, 59)
 
-    # Randomly select 41 unsuccessful plays to use as testing set
-    no_success_plays = [key for key, value in total_data.items() if value.get('label') is True]
-    withheld_no_success_plays = random.sample(no_success_plays, 41)
 
-    withheld_plays = withheld_success_plays + withheld_no_success_plays + withheld_use_case_plays
+
+
+    # # - (2022091105, 2544) - No Success
+    # # - (2022091112, 917)  - Success
+    # # - (2021102403, 3496) - Success
+    # # - (2021100303, 1951) - No Success
+    # # - (2021102410, 3434) - No Success
+    # # - (2021091206, 3353) - MAIN EXAMPLE FOR VISUALIZATION, ADD INDICATOR FOR BOTH RECEIVERS (will need to manually add)
+    # withheld_use_case_plays = [(2022091105, 2544), (2022091112, 917), (2021100303, 1951), (2021102410, 3434)]
+
+    # # Randomly select 59 successful plays to use as testing set
+    # success_plays = [key for key, value in total_data.items() if value.get('label') is True]
+    # withheld_success_plays = random.sample(success_plays, 59)
+
+    # # Randomly select 41 unsuccessful plays to use as testing set
+    # no_success_plays = [key for key, value in total_data.items() if value.get('label') is True]
+    # withheld_no_success_plays = random.sample(no_success_plays, 41)
+
+    # withheld_plays = withheld_success_plays + withheld_no_success_plays + withheld_use_case_plays
     
 
-    # PERFECT EXAMPLE OF FAILURE PREDICTION: (2022091105, 2544)
-    # PERFECT EXAMPLE OF SUCCESS PREDICTION: (2022091112, 917)
-    #   - The moment #33 passes by #55 moving in the opposite direction,
-    #     the Short Pass Success Probability (SPSP) shoots up
+    # # PERFECT EXAMPLE OF FAILURE PREDICTION: (2022091105, 2544)
+    # # PERFECT EXAMPLE OF SUCCESS PREDICTION: (2022091112, 917)
+    # #   - The moment #33 passes by #55 moving in the opposite direction,
+    # #     the Short Pass Success Probability (SPSP) shoots up
 
-    # REMOVE TEST SAMPLE:
-    # test_sample = (2021100303,1951)#(2022091100, 458) #(2022091104,3204) #(2022091110, 514)
-    # test_sample_aug = (2021100303,1951.1)#(2022091100, 458.1)#(2022091104,3204.1)#(2022091110, 514.1)
-    test_sample = random.choice(list(data_2021.keys()))
-    test_sample_aug = (test_sample[0], test_sample[1]+0.1)
+    # # REMOVE TEST SAMPLE:
+    # # test_sample = (2021100303,1951)#(2022091100, 458) #(2022091104,3204) #(2022091110, 514)
+    # # test_sample_aug = (2021100303,1951.1)#(2022091100, 458.1)#(2022091104,3204.1)#(2022091110, 514.1)
+    # test_sample = random.choice(list(data_2021.keys()))
+    # test_sample_aug = (test_sample[0], test_sample[1]+0.1)
 
-    print(total_data[test_sample])
-    withheld_sample = total_data[test_sample]
-    withheld_sample_aug = total_data[test_sample_aug]
-    withheld_data = {}
-    total_data.pop(test_sample, None)
-    total_data.pop(test_sample_aug, None)
+    # print(total_data[test_sample])
+    # withheld_sample = total_data[test_sample]
+    # withheld_sample_aug = total_data[test_sample_aug]
+    # withheld_data = {}
+    # total_data.pop(test_sample, None)
+    # total_data.pop(test_sample_aug, None)
 
-    withheld_data[test_sample] = withheld_sample
-    withheld_data[test_sample_aug] = withheld_sample_aug
-    print('TOTAL DATA mod:', len(total_data))
-    print('WITHHELD DATA:', len(withheld_data))
+    # withheld_data[test_sample] = withheld_sample
+    # withheld_data[test_sample_aug] = withheld_sample_aug
+    # print('TOTAL DATA mod:', len(total_data))
+    # print('WITHHELD DATA:', len(withheld_data))
 
-    # Extract every frame of the play
-    test_game_id, test_play_id = test_sample
-    test_play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == test_game_id) & (passing_play_data_2021['playId'] == test_play_id)]
-    print(test_play_data)
-    test_play_frames = data_processing.get_relevant_frames(test_play_data, passing_tracking_data_2021, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_FORWARD])
-    print(test_play_frames[test_sample])
+    # # Extract every frame of the play
+    # test_game_id, test_play_id = test_sample
+    # test_play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == test_game_id) & (passing_play_data_2021['playId'] == test_play_id)]
+    # print(test_play_data)
+    # test_play_frames = data_processing.get_relevant_frames(test_play_data, passing_tracking_data_2021, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_FORWARD])
+    # print(test_play_frames[test_sample])
 
-    test_play_frames_data = {}
-    z = test_play_frames[test_sample]
-    min_frame = test_play_frames[test_sample]['frameId'].min()
-    max_frame = test_play_frames[test_sample]['frameId'].max()
-    print(f"Min:{min_frame}, Max:{max_frame}")
-    for frame_id in range(min_frame, max_frame+1):
-        data = withheld_data[test_sample].copy()
-        data['tracking_data'] = z[z['frameId'] == frame_id]
-        test_play_frames_data[(test_game_id, test_play_id+(frame_id*0.001))] = data
+    # test_play_frames_data = {}
+    # z = test_play_frames[test_sample]
+    # min_frame = test_play_frames[test_sample]['frameId'].min()
+    # max_frame = test_play_frames[test_sample]['frameId'].max()
+    # print(f"Min:{min_frame}, Max:{max_frame}")
+    # for frame_id in range(min_frame, max_frame+1):
+    #     data = withheld_data[test_sample].copy()
+    #     data['tracking_data'] = z[z['frameId'] == frame_id]
+    #     test_play_frames_data[(test_game_id, test_play_id+(frame_id*0.001))] = data
 
-    print('TOTAL DATA FOR PLAY:', len(test_play_frames_data))
-    # print(test_play_frames_data)
+    # print('TOTAL DATA FOR PLAY:', len(test_play_frames_data))
+    # # print(test_play_frames_data)
 
     
 
@@ -219,9 +236,15 @@ def main():
     data_processing.save_data(input_tensors, 'total_behind_los_pass_aug_withheld_input_tensors')
     data_processing.save_data(labels, 'total_behind_los_pass_aug_withheld_labels')
 
-    test_input_tensors, test_labels = data_processing.get_tensor_batch(test_play_frames_data, all_players)
-    data_processing.save_data(test_input_tensors, 'test_behind_los_pass_aug_input_tensors')
-    data_processing.save_data(test_labels, 'test_behind_los_pass_aug_labels')
+
+
+
+
+
+
+    # test_input_tensors, test_labels = data_processing.get_tensor_batch(test_play_frames_data, all_players)
+    # data_processing.save_data(test_input_tensors, 'test_behind_los_pass_aug_input_tensors')
+    # data_processing.save_data(test_labels, 'test_behind_los_pass_aug_labels')
 
 
     
@@ -286,134 +309,22 @@ def main():
     test_acc = np.mean(preds == test_y.cpu().numpy())
     print("Hold-out accuracy:", test_acc)
 
-    # min_frame = 128
-    # max_frame = 176
-    for i in range(max_frame - min_frame + 1):
-        frame = i+min_frame
-        print(f"FRAME {frame}: {probs[i]}")
-
-    for play,play_frames in test_play_frames.items():
-        game_id, play_id = play
-        play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
-        visualization.create_play_gif(play_data, play_frames, probs, withheld_data[test_sample]['receiver_id'] ,f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
 
 
 
 
+    # # min_frame = 128
+    # # max_frame = 176
+    # for i in range(max_frame - min_frame + 1):
+    #     frame = i+min_frame
+    #     print(f"FRAME {frame}: {probs[i]}")
 
-
-
-
-
-    # if is_data_processing:
-        # random_gameId, random_playId = random.choice(list(data_2018.keys()))
-        # test_data = passing_play_data_2018[(passing_play_data_2018['gameId'] == random_gameId) & (passing_play_data_2018['playId'] == random_playId)]
-        # passes_2018_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2018, start_events=[constants.START], end_events=[constants.END])
-
-        # for play,play_frames in passes_2018_dict.items():
-        #     game_id, play_id = play
-        #     play_data = passing_play_data_2018[(passing_play_data_2018['gameId'] == game_id) & (passing_play_data_2018['playId'] == play_id)].iloc[0]
-        #     print(play_frames)
-        #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
-
-        # random_gameId, random_playId = random.choice(list(data_2021.keys()))
-        # test_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == random_gameId) & (passing_play_data_2021['playId'] == random_playId)]
-        # passes_2021_dict = data_processing.get_relevant_frames(test_data, passing_tracking_data_2021, start_events=[constants.START], end_events=[constants.END])
-
-        # for play,play_frames in passes_2021_dict.items():
-        #     game_id, play_id = play
-        #     play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
-        #     print(play_frames)
-        #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
-
-        # for i in range(1):
-        #     random_gameId, random_playId = random.choice(list(data_2018.keys()))
-        #     test_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == random_gameId) & (passes_behind_los_play_data['playId'] == random_playId)]
-        #     passes_2022_dict = data_processing.get_relevant_frames(test_data, passes_behind_los_tracking_data, start_events=[constants.BALL_SNAP], end_events=[constants.PASS_ARRIVED])
-
-        #     for play,play_frames in passes_2022_dict.items():
-        #         game_id, play_id = play
-        #         play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
-        #         print(play_frames)
-        #         visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
-
-
-
-
-
-
-
-    # Calculate label for each play
-    # passes_behind_los_success_labels = data_processing.estimate_play_success(passes_behind_los_play_data, year=2022)
-
-    
-    # passes_behind_los_tracking_data = pd.concat(passes_behind_los_tracking_data, ignore_index=True)
-    # passing_tracking_data_2021 = pd.concat(passing_tracking_data_2021, ignore_index=True)
-    # print('analyzing intended receivers')
-
-    # Extract first and last name of receiver of a play in the playDescription and create 2 new columns for the name
-    # passing_play_data_2021[['receiver_first_initial', 'receiver_last_name']] = passing_play_data_2021['playDescription'].apply(lambda desc: pd.Series(data_processing.extract_first_and_last_name(desc)))
-
-    
-
-
-    # with open('2021_behind_los_plays_weeks1-8.pkl', 'wb') as f:
-    #     pickle.dump(behind_los_pass_plays_2021, f)
-
-    # with open('2021_behind_los_plays_weeks1-8.pkl', 'rb') as f:
-    #     behind_los_pass_plays_2021 = pickle.load(f)
-    # print('got data')
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # Create GIFs for passing plays
-    # for play,play_frames in passing_frames_dict.items():
-    #     game_id, play_id = play
-    #     play_data = passing_play_data[(passing_play_data['gameId'] == game_id) & (passing_play_data['playId'] == play_id)].iloc[0]
-    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_passing_norm', loop=False, zoom=False)
-
-    # Create GIFs for RPO plays
-    # for play,play_frames in rpo_frames_dict.items():
-    #     game_id, play_id = play
-    #     play_data = rpo_play_data[(rpo_play_data['gameId'] == game_id) & (rpo_play_data['playId'] == play_id)].iloc[0]
-    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_rpo_norm', loop=False, zoom=False)
-    
-    # Create GIFs for play-action plays
-    # for play,play_frames in play_action_frames_dict.items():
-    #     game_id, play_id = play
-    #     play_data = play_action_play_data[(play_action_play_data['gameId'] == game_id) & (play_action_play_data['playId'] == play_id)].iloc[0]
-    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_pa_norm', loop=False, zoom=False)
-
-    # Create GIFs for run plays
-    # for play,play_frames in run_frames_dict.items():
-    #     game_id, play_id = play
-    #     play_data = run_play_data[(run_play_data['gameId'] == game_id) & (run_play_data['playId'] == play_id)].iloc[0]
-    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_run_norm', loop=False, zoom=False)
-
-    # Create GIFs for passes plays behind the LoS
-    # for play,play_frames in passes_behind_los_frames_dict.items():
-    #     game_id, play_id = play
-    #     play_data = passes_behind_los_play_data[(passes_behind_los_play_data['gameId'] == game_id) & (passes_behind_los_play_data['playId'] == play_id)].iloc[0]
-    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_behind_los_norm', loop=False, zoom=False)
-
-    # Create GIFs for 2021 passes
-    # for play,play_frames in passes_2021_dict.items():
+    # for play,play_frames in test_play_frames.items():
     #     game_id, play_id = play
     #     play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
-    #     visualization.create_play_gif(play_data, play_frames, f'{game_id}_{play_id}_2021_norm_short', loop=False, zoom=False)
+    #     visualization.create_play_gif(play_data, play_frames, probs, withheld_data[test_sample]['receiver_id'] ,f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
+
+
 
 
 
