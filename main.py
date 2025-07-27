@@ -207,10 +207,10 @@ def main():
     #     the Short Pass Success Probability (SPSP) shoots up
 
     # REMOVE TEST SAMPLE:
-    # test_sample = (2021100303,1951)#(2022091100, 458) #(2022091104,3204) #(2022091110, 514)
-    # test_sample_aug = (2021100303,1951.1)#(2022091100, 458.1)#(2022091104,3204.1)#(2022091110, 514.1)
-    test_sample = random.choice(list(data_2021.keys()))
-    test_sample_aug = (test_sample[0], test_sample[1]+0.1)
+    test_sample = (2021100303,1951)#(2022091100, 458) #(2022091104,3204) #(2022091110, 514)
+    test_sample_aug = (2021100303,1951.1)#(2022091100, 458.1)#(2022091104,3204.1)#(2022091110, 514.1)
+    # test_sample = random.choice(list(data_2021.keys()))
+    # test_sample_aug = (test_sample[0], test_sample[1]+0.1)
 
     print(total_data[test_sample])
     withheld_sample = total_data[test_sample]
@@ -355,46 +355,6 @@ def main():
         game_id, play_id = play
         play_data = passing_play_data_2021[(passing_play_data_2021['gameId'] == game_id) & (passing_play_data_2021['playId'] == play_id)].iloc[0]
         visualization.create_play_gif(play_data, play_frames, probs, withheld_data[test_sample]['receiver_id'] ,f'{game_id}_{play_id}_behind_los_norm_centered', loop=False, zoom=False)
-
-
-
-
-
-
-
-
-    # input_tensors = []
-    # labels = []
-    # skipped = []
-    # for play,play_data in total_data.items():
-    #     game_id, play_id = play
-
-    #     # Occasionally there are more/less than 11 players on each side, catch this error and skip
-    #     try:
-    #         # Create input tensor
-    #         tensor = data_processing.create_input_tensor(play_data, all_players)
-    #         input_tensors.append(tensor)
-
-    #         # Save corresponding label to input tensor
-    #         label = int(play_data['label'])
-    #         labels.append(label)
-
-    #         print(f"created tensor+label for ({game_id},{play_id})")
-
-
-    #     except:
-    #         skipped.append(play)
-    #         print(f"ERROR FOR ({game_id},{play_id})")
-
-    # print('skipped:', len(skipped))
-    # print('FINAL TENSOR COUNT:', len(input_tensors)) # 7683 total input tensors
-    # print('FINAL LABEL COUNT:', len(labels))
-
-    # data_processing.save_data(input_tensors, 'total_behind_los_pass_aug_withheld_input_tensors')
-    # data_processing.save_data(labels, 'total_behind_los_pass_aug_withheld_labels')
-
-
-
 
 
 
