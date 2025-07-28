@@ -192,13 +192,13 @@ def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, pla
 
             # Only store plays in which the receiver is at or behind the LoS at the moment of the pass
             if receiver_x_at_pass - los <= 2:
-                print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['yardsGained' if 'yardsGained' in play.index else 'playResult']}") #prePenaltyPlayResult
+                print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult']}") #prePenaltyPlayResult
                 candidate_plays[(game_id, play_id)] = {'receiver_id': receiver_id, 
                                                        'los': los,
                                                        'receiver_x': receiver_x_at_pass,
                                                        'down': play['down'],
                                                        'yardsToGo': play['yardsToGo'],
-                                                       'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'playResult'], #prePenaltyPlayResult
+                                                       'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult'], #prePenaltyPlayResult
                                                        'label': estimate_play_success(play),
                                                        'tracking_data': all_22_tracking_features,}
         except:
@@ -311,6 +311,20 @@ def normalize_yards_to_go(yards_to_go):
     return norm
 
 
+def normalize_receiver_position(receiver_position):
+    # 1 of 5 possible values: RB, WR, TE, FB, Other
+    positions = ['RB', 'WR', 'TE', 'FB']
+    pos_val = 0
+
+    if receiver_position in positions:
+        pos_val = positions.index(receiver_position)
+    else:
+        pos_val = len(positions)
+
+    return pos_val / len(positions)
+
+
+
 def create_input_tensor(play_data, player_data):
     down = play_data['down']
     down_norm = down / 3.0  # 1st, 2nd, 3rd/4th downs
@@ -322,6 +336,9 @@ def create_input_tensor(play_data, player_data):
 
     receiver_id = play_data['receiver_id']
     receiver = players_on_field[players_on_field['nflId'] == receiver_id].iloc[0]
+
+    # Get receiver position
+    receiver_pos_norm = normalize_receiver_position(player_data[player_data['nflId'] == receiver_id]['position'].iloc[0])
 
     # Remove the receiver from the tracking_data
     players_without_receiver = players_on_field[players_on_field['nflId'] != receiver_id]
@@ -343,8 +360,8 @@ def create_input_tensor(play_data, player_data):
         player_nflId = player['nflId']
         player_speed = player['dis'] * 10 #player['s']
         player_dir = np.deg2rad(player['dir']) # TODO: Is this right?
-        player_v_x = player_speed * np.sin(player_dir) # TODO: is it x=cos, y=sin, or vice versa?
-        player_v_y = player_speed * np.cos(player_dir)
+        player_v_x = player_speed * np.cos(player_dir) # TODO: is it x=cos, y=sin, or vice versa?
+        player_v_y = player_speed * np.sin(player_dir)
 
         player_vel[player_nflId] = (player_v_x, player_v_y)
 
@@ -383,8 +400,9 @@ def create_input_tensor(play_data, player_data):
     # 5) off - def velocity (v_x, v_y)
     # 6) down (0.33, 0.67, 1.0) - 1st/2nd/3rd-4th downs
     # 7) yardsToGo (normalized)
+    # 8) receiver position (normalized)
 
-    num_features = (5 * 2) + 2  # 5 features with (x,y) values + feature for "down" and "yardsToGo"
+    num_features = (5 * 2) + 3  # 5 features with (x,y) values + feature for "down" + feature for "yardsToGo" + feature for "receiver_position"
     def_count = 11
     off_count = 10
     tensor = np.zeros((num_features, def_count, off_count))
@@ -396,6 +414,10 @@ def create_input_tensor(play_data, player_data):
         def_v_x, def_v_y = player_vel[def_nflId]
         rel_pos_x, rel_pos_y = def_rel_pos[def_nflId]
         rel_vel_x, rel_vel_y = def_rel_vel[def_nflId]
+
+        angle = np.arctan2(rel_pos_y, rel_pos_x)
+        unit = (np.cos(angle), np.sin(angle))
+        closing_speed = rel_vel_x * unit[0] + rel_vel_y * unit[1]
 
         for j, off_player in enumerate(off_players.itertuples(index=False)):
             off_nflId = off_player.nflId
@@ -431,6 +453,9 @@ def create_input_tensor(play_data, player_data):
 
     # Channel 11: normalized yardsToGo
     tensor[11, :, :] = yards_to_go_norm
+
+    # Channel 12: normalized receiver position
+    tensor[12, :, :] = receiver_pos_norm
 
     return tensor
 
