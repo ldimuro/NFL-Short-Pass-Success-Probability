@@ -1,0 +1,10 @@
+python==3.10.16
+streamlit==1.47.1
+numpy==1.26.4
+pandas==2.2.3
+torch==2.2.2
+scikit-learn==1.6.1
+matplotlib==3.10.0
+scipy==1.15.1
+imageio==2.37.0
+pillow==11.1.0
