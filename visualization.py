@@ -6,6 +6,8 @@ import os
 import imageio.v2 as imageio
 import shutil
 import numpy as np
+import subprocess
+import imageio_ffmpeg
 
 def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
@@ -110,11 +112,11 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
     # Add SPSP indicator around receiver
     receiver_row = frame[frame['nflId'] == receiver_id]
     if not receiver_row.empty:
-        if spsp_rolling_avg >= 0.6:
+        if spsp_rolling_avg >= 0.7:
             indicator_color = '#15FF00'
-        elif spsp_rolling_avg < 0.4:
+        elif spsp_rolling_avg < 0.4 and spsp_rolling_avg > 0:
             indicator_color = '#FF2D2D'
-        elif spsp_rolling_avg >= 0.4 and spsp_rolling_avg < 0.6:
+        elif spsp_rolling_avg >= 0.4 and spsp_rolling_avg < 0.7:
             indicator_color = "#FFA02D"
         else:
             indicator_color = "#696969"
@@ -185,11 +187,11 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
     ax.set_yticks([])
 
     plt.tight_layout()
-    plt.savefig(f"plots/{file_name}/{file_name}_{frame['frameId'].iloc[0]:04d}{'_zoomed' if zoom else ''}.png")
+    plt.savefig(f"play_frames/{file_name}/{file_name}_{frame['frameId'].iloc[0]:04d}{'_zoomed' if zoom else ''}.png")
     plt.close()
 
 
-def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_id, file_name, zoom=False, loop=True):
+def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_id, file_name, zoom=False, loop=True, delete_frame_plots=True):
     frame_start = frames['frameId'].min()
     frame_end = frames['frameId'].max()
 
@@ -197,7 +199,7 @@ def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_
     print('frame_end:', frame_end)
 
     # Create new folder for frame plots
-    folder_name = f'plots/{file_name}'
+    folder_name = f'play_frames/{file_name}'
     os.makedirs(folder_name, exist_ok=True)
 
     print('creating gif...')
@@ -216,7 +218,7 @@ def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_
         plot_frame(frame, play_data, spsp_prob_per_frame[prob_count], prob_rolling_avg, receiver_id, file_name, zoom=zoom)
         prob_count += 1
     
-    frames_folder = f'plots/{file_name}'
+    frames_folder = f'play_frames/{file_name}'
     gif_output_path = f"play_gifs/{file_name}{'_zoomed' if zoom else ''}.gif"
 
     # Get list of image filenames in sorted order
@@ -234,13 +236,32 @@ def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_
             writer.append_data(image)
 
     # Delete individual frame plots when completed
-    if os.path.exists(frames_folder):
-        shutil.rmtree(frames_folder)
-        print(f'Deleted folder: {frames_folder}')
-    else:
-        print(f'Folder not found: {frames_folder}')
+    if delete_frame_plots:
+        if os.path.exists(frames_folder):
+            shutil.rmtree(frames_folder)
+            print(f'Deleted folder: {frames_folder}')
+        else:
+            print(f'Folder not found: {frames_folder}')
 
     print('gif created')
+
+
+def convert_gif_to_mp4(gif_path, output_path):
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    command = [
+        ffmpeg_path,
+        "-i", gif_path,
+        "-movflags", "+faststart",
+        "-pix_fmt", "yuv420p",
+        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        output_path
+    ]
+
+    try:
+        subprocess.run(command, check=True)
+        print(f"Converted: {gif_path} → {output_path}")
+    except subprocess.CalledProcessError as e:
+        print(f"Conversion failed: {e}")
 
 
 team_colors = {
