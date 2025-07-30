@@ -107,7 +107,7 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
 
     # Add players
     players = frame[frame['team'] != 'football'] if frame['club'].isna().all() else frame[frame['club'] != 'football']
-    ax.scatter(players['x'], players['y'], c=players['team' if frame['club'].isna().all() else 'club'].map(color_map), s=1000 if zoom else 60, zorder=3)
+    ax.scatter(players['x'], players['y'], c=players['team' if frame['club'].isna().all() else 'club'].map(color_map), s=1000 if zoom else 70, zorder=3)
 
     # Add SPSP indicator around receiver
     receiver_row = frame[frame['nflId'] == receiver_id]
@@ -124,7 +124,7 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
         ax.scatter(
             receiver_row['x'], 
             receiver_row['y'], 
-            s=1100 if zoom else 80, 
+            s=1100 if zoom else 100, 
             facecolors='none', 
             edgecolors=indicator_color, 
             linewidths=2, 
@@ -137,8 +137,7 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
     dy = np.cos(angles)   # Y-component of direction
 
     # Offset distance: approximate radius of player circle
-    # Adjust scaling for zoom vs. full field
-    marker_radius = 1.2 if zoom else 0.4  # tweak until it looks right
+    marker_radius = 1.2 if zoom else 0.4
 
     # Apply offset to starting positions
     x_offset = players['x'] + dx * marker_radius
@@ -155,7 +154,7 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
         scale=1 / arrow_length,
         color=players['team' if frame['club'].isna().all() else 'club'].map(color_map),
         width=0.005,#0.01 if zoom else 0.0015,
-        zorder=4
+        zorder=3
     )
 
     # Add jersey numbers
@@ -191,7 +190,37 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
     plt.close()
 
 
-def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_id, file_name, zoom=False, loop=True, delete_frame_plots=True):
+def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file_name):
+    fig, ax = plt.subplots()
+
+    # Color bands
+    ax.axhspan(0.7, 1.0, facecolor='lightgreen', alpha=0.3)
+    ax.axhspan(0.4, 0.7, facecolor='orange', alpha=0.2)
+    ax.axhspan(0.0, 0.4, facecolor='lightcoral', alpha=0.3)
+
+    prob = spsp_prob_per_frame[:prob_count + 1]
+    rolling_probs = get_rolling_avg(spsp_prob_per_frame)
+        
+    ax.plot(range(prob_count+1), rolling_probs[:prob_count + 1], color='black', marker='o') #spsp_prob_per_frame[:prob_count + 1]
+
+    # Set fixed axis limits
+    x_min, x_max = 0, len(spsp_prob_per_frame)-1
+    y_min, y_max = 0, 1
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+
+    # Optional: Add labels and title
+    ax.set_xlabel("Frame")
+    ax.set_ylabel("Probability")
+    ax.set_title("Probability over Time")
+
+    plt.tight_layout()
+    plt.savefig(f"play_prob_frames/{file_name}_probs/{file_name}_{frame_id:04d}_probs.png")
+    plt.close()
+
+
+
+def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_id, file_name, zoom=False, loop=True, delete_frame_plots=False):
     frame_start = frames['frameId'].min()
     frame_end = frames['frameId'].max()
 
@@ -200,6 +229,9 @@ def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_
 
     # Create new folder for frame plots
     folder_name = f'play_frames/{file_name}'
+    os.makedirs(folder_name, exist_ok=True)
+
+    folder_name = f'play_prob_frames/{file_name}_probs'
     os.makedirs(folder_name, exist_ok=True)
 
     print('creating gif...')
@@ -216,6 +248,7 @@ def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_
             prob_rolling_avg = 0.0
 
         plot_frame(frame, play_data, spsp_prob_per_frame[prob_count], prob_rolling_avg, receiver_id, file_name, zoom=zoom)
+        plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file_name)
         prob_count += 1
     
     frames_folder = f'play_frames/{file_name}'
@@ -262,6 +295,18 @@ def convert_gif_to_mp4(gif_path, output_path):
         print(f"Converted: {gif_path} → {output_path}")
     except subprocess.CalledProcessError as e:
         print(f"Conversion failed: {e}")
+
+
+def get_rolling_avg(prob_list, window_size=3):
+    rolling_avg = []
+    for i in range(len(prob_list)):
+        if i < window_size - 1:
+            rolling_avg.append(None)
+        else:
+            avg = sum(prob_list[i - window_size + 1:i + 1]) / window_size
+            rolling_avg.append(avg)
+
+    return rolling_avg
 
 
 team_colors = {
