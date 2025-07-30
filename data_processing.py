@@ -415,10 +415,6 @@ def create_input_tensor(play_data, player_data):
         rel_pos_x, rel_pos_y = def_rel_pos[def_nflId]
         rel_vel_x, rel_vel_y = def_rel_vel[def_nflId]
 
-        angle = np.arctan2(rel_pos_y, rel_pos_x)
-        unit = (np.cos(angle), np.sin(angle))
-        closing_speed = rel_vel_x * unit[0] + rel_vel_y * unit[1]
-
         for j, off_player in enumerate(off_players.itertuples(index=False)):
             off_nflId = off_player.nflId
 

@@ -201,7 +201,7 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
     prob = spsp_prob_per_frame[:prob_count + 1]
     rolling_probs = get_rolling_avg(spsp_prob_per_frame)
         
-    ax.plot(range(prob_count+1), rolling_probs[:prob_count + 1], color='black', marker='o') #spsp_prob_per_frame[:prob_count + 1]
+    ax.plot(range(prob_count+1), rolling_probs[:prob_count + 1], color='gray', marker='o') #spsp_prob_per_frame[:prob_count + 1]
 
     # Set fixed axis limits
     x_min, x_max = 0, len(spsp_prob_per_frame)-1
@@ -210,12 +210,12 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
     ax.set_ylim(y_min, y_max)
 
     # Optional: Add labels and title
-    ax.set_xlabel("Frame")
-    ax.set_ylabel("Probability")
-    ax.set_title("Probability over Time")
+    ax.set_xlabel('Frame')
+    ax.set_ylabel('Success Probability')
+    ax.set_title(f'Success Probability of Receiver={receiver_id} over Time')
 
     plt.tight_layout()
-    plt.savefig(f"play_prob_frames/{file_name}_probs/{file_name}_{frame_id:04d}_probs.png")
+    plt.savefig(f'play_prob_frames/{file_name}_probs/{file_name}_{frame_id:04d}_probs.png')
     plt.close()
 
 
