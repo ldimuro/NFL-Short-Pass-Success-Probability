@@ -4,7 +4,6 @@ from PIL import Image
 import time
 
 st.title("CNN-Based 'Short Pass Success Probability'")
-
 st.set_page_config(layout='wide')
 
 # FUNCTIONS
@@ -20,76 +19,112 @@ def load_frames(path):
 def set_idx(new_idx):
     st.session_state.idx = max(0, min(new_idx, len(frames) - 1))
 
+def toggle_play():
+    st.session_state.is_playing = not st.session_state.is_playing
+
 #######################################################################
 
-game_id = '2021102404'
-play_id = '108'
-fps = 10
-frame_delay = 1.0 / fps
 
-# Get play frames
-frames = load_frames(f'play_frames/{game_id}_{play_id}_behind_los_norm_centered')
-if not frames:
-    st.stop()
-
-# Get probability frames
-prob_frames = load_frames(f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs')
-if not prob_frames:
-    st.stop()
-
+plays = [(2021102404, 108), (2021102410, 3434), (2021100303, 1951), (2021091212, 611)]
 
 if 'idx' not in st.session_state:
     st.session_state.idx = 0
 
-
-# BUTTONS
-c1,c2,c3,c4 = st.columns([1,1,1,4])
-with c1:
-    if st.button('⬅️'):
-        set_idx(st.session_state.idx - 1)
-with c2:
-    if st.button('➡️'):
-        set_idx(st.session_state.idx + 1)
-with c3:
-    if st.button('🔁'):
-        set_idx(0)
-
-# SLIDER
-idx = st.slider('Frame', 0, len(frames)-1, value=st.session_state.idx)
-set_idx(idx)
-
-
-# MAIN VIEWERS
-main_col1, main_col2 = st.columns([1.38, 1])
-
-# PLAY FRAMES
-with main_col1:
-    play_slot = st.empty()
-    play_slot.image(frames[st.session_state.idx],
-                    caption=f"Play Frame {st.session_state.idx + 1}",
-                    use_container_width=True)
-
-# PROBABILITY FRAMES
-with main_col2:
-    prob_slot = st.empty()
-    prob_slot.image(prob_frames[st.session_state.idx],
-                    caption=f"Probability Frame {st.session_state.idx + 1}",
-                    use_container_width=True)
+if 'is_playing' not in st.session_state:
+    st.session_state.is_playing = False
 
 
 
-# with col1:
-#     st.write('Left content')
-# with col2:
-#     game_id, play_id = (2021102404, 108)
+# VIEWERS
+#######################################################################
+    
+left_col, right_col = st.columns([1, 4])
 
-#     mp4_dir = 'play_mp4s'
-#     mp4_files = sorted([f for f in os.listdir(mp4_dir) if f.endswith('.mp4')])
-#     if not mp4_files:
-#         st.warning('No MP4 files found in play_mp4s/')
-#         st.stop()
+# Play Selection View
+with left_col:
+    selected_play = st.selectbox('Choose a play:', plays)
+    game_id, play_id = selected_play
 
-#     selected = st.selectbox('Choose a play:', mp4_files)
+    # Initialize or check for previous play
+    if "last_play" not in st.session_state:
+        st.session_state.last_play = selected_play
 
-#     mp4_path = os.path.join(mp4_dir, selected)
-#     # st.video(mp4_path)
+    # If user selects a new play, reset frame & stop playback
+    if selected_play != st.session_state.last_play:
+        st.session_state.idx = 0
+        st.session_state.is_playing = False
+        st.session_state.last_play = selected_play
+
+
+    # Get play frames
+    frames = load_frames(f'play_frames/{game_id}_{play_id}_behind_los_norm_centered')
+    if not frames:
+        st.stop()
+
+    # Get probability frames
+    prob_frames = load_frames(f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs')
+    if not prob_frames:
+        st.stop()
+
+
+# Data Views
+with right_col:
+
+    main_col1, main_col2 = st.columns([1.5, 1])
+
+    # Main Play View
+    with main_col1:
+        play_slot = st.empty()
+        play_slot.image(frames[st.session_state.idx],
+                        caption=f"Play Frame {st.session_state.idx + 1}",
+                        use_container_width=True)
+
+    # Probability View
+    with main_col2:
+        prob_slot = st.empty()
+        prob_slot.image(prob_frames[st.session_state.idx],
+                        caption=f"Probability Frame {st.session_state.idx + 1}",
+                        use_container_width=True)
+        
+    # Controls
+    spacer1, c1, c2, c3, c4, spacer2 = st.columns([1, 0.15, 0.15, 0.15, 0.15, 1], gap="small")#c1,c2,c3,c4 = st.columns([1,1,1,8])
+    with c1:
+        st.button('⬅️', on_click=lambda: set_idx(st.session_state.idx - 1), disabled=st.session_state.is_playing)
+    with c2:
+        is_last_frame = st.session_state.idx == len(frames) - 1
+        st.button("▶️" if not st.session_state.is_playing else "⏸️",
+                on_click=toggle_play,
+                disabled=is_last_frame and not st.session_state.is_playing)
+    with c3:
+        st.button('➡️', on_click=lambda: set_idx(st.session_state.idx + 1), disabled=st.session_state.is_playing)
+    with c4:
+        if st.button('🔁'):
+            set_idx(0)
+            if not st.session_state.is_playing:
+                st.rerun()
+    
+#######################################################################
+
+
+# Playback Loop
+fps = 10
+frame_delay = 1.0 / fps
+if st.session_state.is_playing:
+    while st.session_state.idx < len(frames) - 1:
+        time.sleep(frame_delay)
+        st.session_state.idx += 1
+
+        play_slot.image(frames[st.session_state.idx],
+                        caption=f"Play Frame {st.session_state.idx + 1}",
+                        use_container_width=True)
+        prob_slot.image(prob_frames[st.session_state.idx],
+                        caption=f"Probability Frame {st.session_state.idx + 1}",
+                        use_container_width=True)
+
+        if not st.session_state.is_playing:
+            break
+
+    # Stop playback when last frame is reached
+    st.session_state.is_playing = False
+    st.rerun()
+
