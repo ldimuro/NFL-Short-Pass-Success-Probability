@@ -205,14 +205,14 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
 
     # Set fixed axis limits
     x_min, x_max = 0, len(spsp_prob_per_frame)-1
-    y_min, y_max = 0, 1
+    y_min, y_max = 0.1, 1
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
 
-    # Optional: Add labels and title
     ax.set_xlabel('Frame')
     ax.set_ylabel('Success Probability')
     ax.set_title(f'Success Probability of Receiver={receiver_id} over Time')
+    ax.grid(True, alpha=0.4)
 
     plt.tight_layout()
     plt.savefig(f'play_prob_frames/{file_name}_probs/{file_name}_{frame_id:04d}_probs.png')
