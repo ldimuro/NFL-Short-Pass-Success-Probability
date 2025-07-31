@@ -7,52 +7,58 @@ from torch.utils.data import random_split
 from torch.optim.lr_scheduler import OneCycleLR
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+from sklearn.metrics import roc_auc_score, log_loss, precision_recall_curve, auc
+
+
+class SqueezeExcite(nn.Module):
+    def __init__(self, in_channels, r=4):
+        super().__init__()
+        self.squeeze = nn.AdaptiveAvgPool2d(1)
+        self.excitation = nn.Sequential(
+            nn.Conv2d(in_channels, in_channels // r, 1), 
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(in_channels // r, in_channels, 1), 
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        scale = self.excitation(self.squeeze(x))
+        return x * scale    
 
 
 class BasicCNN(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=13):
         super().__init__()
 
         self.features = nn.Sequential(
-            nn.Conv2d(12, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels, 32, 3, padding=1), 
+            nn.BatchNorm2d(32), 
             nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(2),  # Downsamples spatial size from (11,10) => (5,5)
 
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(32, 32, 3, padding=1), 
+            nn.BatchNorm2d(32), 
             nn.ReLU(),
+
+            nn.Conv2d(32, 64, 3, padding=1), 
+            nn.BatchNorm2d(64), 
+            nn.ReLU(),
+
+            SqueezeExcite(64, r=4),
             nn.AdaptiveAvgPool2d((1, 1))
         )
+
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Dropout(0.4),
-            nn.Linear(64, 32),
-            nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(32, 1)
+            nn.Linear(64, 1)
         )
+
 
     def forward(self, x):
         x = self.features(x)
         return self.classifier(x).squeeze(-1)
     
-    
-def accuracy(model, loader):
-    model.eval()
-    correct = total = 0
-
-    with torch.no_grad():
-        for xb,yb in loader:
-            pred = torch.sigmoid(model(xb)) > 0.5
-            correct += (pred == yb).sum().item()
-            total += yb.size(0)
-    
-    return correct / total
-
 
 def cross_validation(x, y, num_epochs=20, k=5):
     cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
@@ -60,6 +66,7 @@ def cross_validation(x, y, num_epochs=20, k=5):
 
     all_train_losses, all_val_losses = [], []
     all_train_accs, all_val_accs = [], []
+    all_roc_aucs, all_log_losses, all_pr_aucs = [], [], []
 
     best_acc = 0.0
     best_state = None
@@ -138,6 +145,31 @@ def cross_validation(x, y, num_epochs=20, k=5):
         # Evaluate accuracy
         # scores.append(accuracy(model, val_dataloader))
 
+        # Compute ROC-AUC and Log Loss for this fold
+        probs = []
+        true_labels = []
+        model.eval()
+        with torch.no_grad():
+            for xb, yb in val_dataloader:
+                output = model(xb)
+                prob = torch.sigmoid(output).squeeze().cpu().numpy()
+                label = yb.squeeze().cpu().numpy()
+                probs.extend(prob.tolist())
+                true_labels.extend(label.tolist())
+
+        roc = roc_auc_score(true_labels, probs)
+        logloss = log_loss(true_labels, probs)
+
+        precision, recall, _ = precision_recall_curve(true_labels, probs)
+        pr_auc = auc(recall, precision)
+
+        all_roc_aucs.append(roc)
+        all_log_losses.append(logloss)
+        all_pr_aucs.append(pr_auc)
+        
+
+        print(f"\tFold {fold+1} ROC-AUC: {roc:.4f}, PR-AUC: {pr_auc:.4f}, Log Loss: {logloss:.4f}")
+
     # Plot average over folds
     avg_train_loss = np.mean(all_train_losses, axis=0)
     avg_val_loss   = np.mean(all_val_losses, axis=0)
@@ -164,6 +196,10 @@ def cross_validation(x, y, num_epochs=20, k=5):
 
     plt.tight_layout()
     plt.savefig('train_val_loss_accuracy.png')
+
+    print(f"\nAvg ROC-AUC across folds: {np.mean(all_roc_aucs):.4f} +/- {np.std(all_roc_aucs):.4f}")
+    print(f"Avg PR-AUC across folds: {np.mean(all_pr_aucs):.4f} +/- {np.std(all_pr_aucs):.4f}")
+    print(f"Avg Log Loss across folds: {np.mean(all_log_losses):.4f} +/- {np.std(all_log_losses):.4f}")
 
 
     return np.mean(scores), np.std(scores), best_acc, best_state
