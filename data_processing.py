@@ -97,7 +97,7 @@ def augment_data(data):
 
 
 
-def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_events, extra_frames=0):
+def get_relevant_frames(play_data: DataFrame, tracking_data: DataFrame, start_events, end_events, extra_frames=0):
     play_tracking_dict = {}
 
     # Collapse all weeks of tracking data into 1 DataFrame
@@ -115,15 +115,6 @@ def get_relevant_frames(play_data: DataFrame, tracking_data, start_events, end_e
         
         if not match.empty:
             tracking_play = match.sort_values('frameId')
-            # print('FOUND in week', i+1)
-            # break
-        # for i,week_df in enumerate(tracking_data):
-        #     match = week_df[(week_df['gameId'] == game_id) & (week_df['playId'] == play_id)]
-            
-        #     if not match.empty:
-        #         tracking_play = match.sort_values('frameId')
-        #         # print('FOUND in week', i+1)
-        #         break
 
         # Remove all frames before start_events and after end_events
         if tracking_play is not None:
@@ -215,10 +206,6 @@ def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, pla
 # Extract first name initial(s) and last name from playDescription
 # Can handle cases such as "H.Henry", "Mi.Carter", and "A.St. Brown"
 def extract_first_and_last_name(description):
-    """
-    Extracts first name initial(s) and last name from a play description.
-    Returns a tuple: (initials, last_name), or (None, None) if not matched.
-    """
     match = re.search(r'\bto\s+([A-Z][a-z]?)\.([A-Z][a-z]*(?:\.?\s?[A-Z][a-z]*)*)', description)
     if match:
         initials = match.group(1).strip()
