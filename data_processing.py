@@ -184,14 +184,16 @@ def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, pla
             # Only store plays in which the receiver is at or behind the LoS at the moment of the pass
             if receiver_x_at_pass - los <= 2:
                 print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult']}") #prePenaltyPlayResult
-                candidate_plays[(game_id, play_id)] = {'receiver_id': receiver_id, 
-                                                       'los': los,
-                                                       'receiver_x': receiver_x_at_pass,
-                                                       'down': play['down'],
-                                                       'yardsToGo': play['yardsToGo'],
-                                                       'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult'], #prePenaltyPlayResult
-                                                       'label': estimate_play_success(play),
-                                                       'tracking_data': all_22_tracking_features,}
+                candidate_plays[(game_id, play_id)] = {
+                        'receiver_id': receiver_id, 
+                        'los': los,
+                        'receiver_x': receiver_x_at_pass,
+                        'down': play['down'],
+                        'yardsToGo': play['yardsToGo'],
+                        'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult'], #prePenaltyPlayResult
+                        'label': estimate_play_success(play),
+                        'tracking_data': all_22_tracking_features
+                }
         except:
             print('skipped!')
             skipped += 1
@@ -292,6 +294,7 @@ def estimate_play_success(play_data: DataFrame):
 
 
 def normalize_yards_to_go(yards_to_go):
+    # Range of Down & 0.5-30 yards to go
     min = 0.5
     max = 30
     norm = (yards_to_go - min) / (max - min)
@@ -306,9 +309,9 @@ def normalize_receiver_position(receiver_position):
     if receiver_position in positions:
         pos_val = positions.index(receiver_position)
     else:
-        pos_val = len(positions)
+        pos_val = len(positions)    # is it len(positions+1)
 
-    return pos_val / len(positions)
+    return pos_val / len(positions) # is it len(positions+1)
 
 
 
