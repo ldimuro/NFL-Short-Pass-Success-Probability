@@ -38,70 +38,74 @@ if 'is_playing' not in st.session_state:
 # VIEWERS
 #######################################################################
     
-left_col, right_col = st.columns([1, 4])
+# left_col, right_col = st.columns([1, 5])
 
 # Play Selection View
-with left_col:
+# with left_col:
+col1, col2, col3 = st.columns([2, 1, 2])
+with col2:
     selected_play = st.selectbox('Choose a play:', plays)
-    game_id, play_id = selected_play
 
-    # Initialize or check for previous play
-    if "last_play" not in st.session_state:
-        st.session_state.last_play = selected_play
+# selected_play = st.selectbox('Choose a play:', plays)
+game_id, play_id = selected_play
 
-    # If user selects a new play, reset frame & stop playback
-    if selected_play != st.session_state.last_play:
-        st.session_state.idx = 0
-        st.session_state.is_playing = False
-        st.session_state.last_play = selected_play
+# Initialize or check for previous play
+if "last_play" not in st.session_state:
+    st.session_state.last_play = selected_play
+
+# If user selects a new play, reset frame & stop playback
+if selected_play != st.session_state.last_play:
+    st.session_state.idx = 0
+    st.session_state.is_playing = False
+    st.session_state.last_play = selected_play
 
 
-    # Get play frames
-    frames = load_frames(f'play_frames/{game_id}_{play_id}_behind_los_norm_centered')
-    if not frames:
-        st.stop()
+# Get play frames
+frames = load_frames(f'play_frames/{game_id}_{play_id}_behind_los_norm_centered')
+if not frames:
+    st.stop()
 
-    # Get probability frames
-    prob_frames = load_frames(f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs')
-    if not prob_frames:
-        st.stop()
+# Get probability frames
+prob_frames = load_frames(f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs')
+if not prob_frames:
+    st.stop()
 
 
 # Data Views
-with right_col:
+# with right_col:
 
-    main_col1, main_col2 = st.columns([1.5, 1])
+main_col1, main_col2 = st.columns([1.5, 1])
 
-    # Main Play View
-    with main_col1:
-        play_slot = st.empty()
-        play_slot.image(frames[st.session_state.idx],
-                        caption=f"Play Frame {st.session_state.idx + 1}",
-                        use_container_width=True)
+# Main Play View
+with main_col1:
+    play_slot = st.empty()
+    play_slot.image(frames[st.session_state.idx],
+                    #caption=f"Play Frame {st.session_state.idx + 1}",
+                    use_container_width=True)
 
-    # Probability View
-    with main_col2:
-        prob_slot = st.empty()
-        prob_slot.image(prob_frames[st.session_state.idx],
-                        caption=f"Probability Frame {st.session_state.idx + 1}",
-                        use_container_width=True)
-        
-    # Controls
-    spacer1, c1, c2, c3, c4, spacer2 = st.columns([1, 0.15, 0.15, 0.15, 0.15, 1], gap="small")#c1,c2,c3,c4 = st.columns([1,1,1,8])
-    with c1:
-        st.button('⬅️', on_click=lambda: set_idx(st.session_state.idx - 1), disabled=st.session_state.is_playing)
-    with c2:
-        is_last_frame = st.session_state.idx == len(frames) - 1
-        st.button("▶️" if not st.session_state.is_playing else "⏸️",
-                on_click=toggle_play,
-                disabled=is_last_frame and not st.session_state.is_playing)
-    with c3:
-        st.button('➡️', on_click=lambda: set_idx(st.session_state.idx + 1), disabled=st.session_state.is_playing)
-    with c4:
-        if st.button('🔁'):
-            set_idx(0)
-            if not st.session_state.is_playing:
-                st.rerun()
+# Probability View
+with main_col2:
+    prob_slot = st.empty()
+    prob_slot.image(prob_frames[st.session_state.idx],
+                    # caption=f"Probability Frame {st.session_state.idx + 1}",
+                    use_container_width=True)
+    
+# Controls
+spacer1, c1, c2, c3, c4, spacer2 = st.columns([4, 0.5, 0.5, 0.5, 0.5, 4])#c1,c2,c3,c4 = st.columns([1,1,1,8])
+with c1:
+    st.button('<', on_click=lambda: set_idx(st.session_state.idx - 1), disabled=st.session_state.is_playing)
+with c2:
+    is_last_frame = st.session_state.idx == len(frames) - 1
+    st.button("▶" if not st.session_state.is_playing else "⏸", #▶ ⏸
+            on_click=toggle_play,
+            disabled=is_last_frame and not st.session_state.is_playing)
+with c3:
+    st.button('\>', on_click=lambda: set_idx(st.session_state.idx + 1), disabled=st.session_state.is_playing)
+with c4:
+    if st.button('↺'): #↺
+        set_idx(0)
+        if not st.session_state.is_playing:
+            st.rerun()
     
 #######################################################################
 
@@ -115,10 +119,10 @@ if st.session_state.is_playing:
         st.session_state.idx += 1
 
         play_slot.image(frames[st.session_state.idx],
-                        caption=f"Play Frame {st.session_state.idx + 1}",
+                        # caption=f"Play Frame {st.session_state.idx + 1}",
                         use_container_width=True)
         prob_slot.image(prob_frames[st.session_state.idx],
-                        caption=f"Probability Frame {st.session_state.idx + 1}",
+                        # caption=f"Probability Frame {st.session_state.idx + 1}",
                         use_container_width=True)
 
         if not st.session_state.is_playing:
