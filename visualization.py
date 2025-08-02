@@ -12,7 +12,9 @@ import imageio_ffmpeg
 def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
 
-    ball = frame[frame['team'] == 'football'].iloc[0] if frame['club'].isna().all() else frame[frame['club'] == 'football'].iloc[0]
+    # print('HERE:\n', frame)
+
+    ball = frame[frame['team'] == 'football'].iloc[0] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] == 'football'].iloc[0]
     ball_x = ball['x']
     ball_y = ball['y']
 
@@ -22,8 +24,12 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
     # Set green background for the field
     ax.set_facecolor('mediumseagreen')
 
-    off_color = team_colors[play_data['possessionTeam']]
-    def_color = team_colors[play_data['defensiveTeam']]
+    try:
+        off_color = team_colors[play_data['possessionTeam']]
+        def_color = team_colors[play_data['defensiveTeam']]
+    except:
+        off_color = team_colors['home']
+        def_color = team_colors['away']
 
     # Draw red end zone (left) and blue end zone (right)
     ax.axvspan(0, 10, color=off_color, zorder=1)
@@ -97,17 +103,17 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
     ax.axvline(x=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=6 if zoom else 2, zorder=2.2)
 
     # Handle team colors
-    teams = frame['team'].unique().tolist() if frame['club'].isna().all() else frame['club'].unique().tolist()
+    teams = frame['team'].unique().tolist() if ('club' not in frame.columns or frame['club'].isna().all()) else frame['club'].unique().tolist()
     teams.remove('football')
     color_map = {teams[0]: team_colors[teams[0]], teams[1]: team_colors[teams[1]], 'football': '#dec000'}
 
     # Add ball
-    football = frame[frame['team'] == 'football'] if frame['club'].isna().all() else frame[frame['club'] == 'football']
+    football = frame[frame['team'] == 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] == 'football']
     ax.scatter(football['x'], football['y'], c='#dec000', s=500 if zoom else 25, marker='o',zorder=3.1)
 
     # Add players
-    players = frame[frame['team'] != 'football'] if frame['club'].isna().all() else frame[frame['club'] != 'football']
-    ax.scatter(players['x'], players['y'], c=players['team' if frame['club'].isna().all() else 'club'].map(color_map), s=1000 if zoom else 70, zorder=3)
+    players = frame[frame['team'] != 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] != 'football']
+    ax.scatter(players['x'], players['y'], c=players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), s=1000 if zoom else 70, zorder=3)
 
     # Add SPSP indicator around receiver
     receiver_row = frame[frame['nflId'] == receiver_id]
@@ -152,7 +158,7 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
         angles='xy',
         scale_units='xy',
         scale=1 / arrow_length,
-        color=players['team' if frame['club'].isna().all() else 'club'].map(color_map),
+        color=players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map),
         width=0.005,#0.01 if zoom else 0.0015,
         zorder=3
     )
@@ -176,8 +182,23 @@ def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_
     fig.suptitle(title, fontsize=18)
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
-    play_state = f"{play_data['possessionTeam']} vs. {play_data['defensiveTeam']}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
-    play_state += f", yardsGained: {play_data['playResult'] if '2021' in str(play_data['gameId']) else play_data['yardsGained']}, {spsp_prob*100:.2f}% SPSP ({spsp_rolling_avg*100:.2f}% rolling)"
+
+    try:
+        possession_team = play_data['possessionTeam']
+        defensive_team = play_data['defensiveTeam']
+    except:
+        possession_team = 'Team1'
+        defensive_team = 'Team2'
+
+    if str(play_data['gameId']).startswith('2018'):
+        yards_gained = play_data['playResult']
+    elif str(play_data['gameId']).startswith('2021'):
+        yards_gained = play_data['prePenaltyPlayResult']
+    elif str(play_data['gameId']).startswith('2022'):
+        yards_gained = play_data['yardsGained']
+
+    play_state = f"{possession_team} vs. {defensive_team}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
+    play_state += f", yardsGained: {yards_gained}, {spsp_prob*100:.2f}% SPSP ({spsp_rolling_avg*100:.2f}% rolling)"
     fig.text(0.5, 0.90, play_state, ha='center', fontsize=16)
 
     ax.set_aspect('equal', adjustable='box')
@@ -342,4 +363,6 @@ team_colors = {
     'TB':  '#D50A0A',
     'TEN': '#4B92DB',
     'WAS': '#773141',
+    'home': '#000000',
+    'away': '#FFFFFF'
 }
