@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import OneCycleLR
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, log_loss, precision_recall_curve, auc
+from sklearn.calibration import calibration_curve
 
 
 class SqueezeExcite(nn.Module):
@@ -60,13 +61,15 @@ class BasicCNN(nn.Module):
         return self.classifier(x).squeeze(-1)
     
 
-def cross_validation(x, y, num_epochs=20, k=5):
+def cross_validation(x, y, num_epochs=25, k=5):
     cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
     scores = []
+    hc_scores, mc_scores, lc_scores = [], [], []
 
     all_train_losses, all_val_losses = [], []
     all_train_accs, all_val_accs = [], []
     all_roc_aucs, all_log_losses, all_pr_aucs = [], [], []
+    all_spsp_preds, all_spsp_trues = [], [] # for calibration
 
     best_acc = 0.0
     best_state = None
@@ -88,6 +91,9 @@ def cross_validation(x, y, num_epochs=20, k=5):
 
         train_losses, val_losses = [], []
         train_accs, val_accs = [], []
+        val_hc_accs = []
+        val_mc_accs = []
+        val_lc_accs = []
 
         epochs = num_epochs
         model.train()
@@ -106,29 +112,68 @@ def cross_validation(x, y, num_epochs=20, k=5):
 
                 total_loss += loss.item()
 
-                pred = (torch.sigmoid(output) > 0.5)
+                spsp = torch.sigmoid(output).squeeze()  # 'Short Pass Success Probability' - THE MAIN METRIC OF THE PROJECT
+
+                # Binary Measure of Success
+                pred = (spsp > 0.5).float()
+                yb = yb.squeeze()
+
+                # Overall Accuracy
                 correct += (pred == yb).sum().item()
                 total += yb.size(0)
 
+
             train_losses.append(total_loss / len(train_dataloader))
             train_accs.append(correct / total)
-
         
             # Validation eval
             model.eval()
             val_loss = 0
+            # val_correct, val_hc_correct, val_lc_correct, val_total, val_hc_total, val_lc_total = 0, 0, 0, 0, 0, 0
             val_correct, val_total = 0, 0
+            val_hc_correct, val_hc_total = 0, 0
+            val_mc_correct, val_mc_total = 0, 0
+            val_lc_correct, val_lc_total = 0, 0
             with torch.no_grad():
                 for xb, yb in val_dataloader:
                     output = model(xb)
                     loss = criterion(output, yb.float())
                     val_loss += loss.item()
-                    pred = (torch.sigmoid(output) > 0.5)
+
+                    spsp = torch.sigmoid(output).squeeze()
+
+                    # Binary Measure of Success
+                    pred = (spsp > 0.5).float()
+                    yb = yb.squeeze()
+
+                    # Overall Accuracy
                     val_correct += (pred == yb).sum().item()
                     val_total += yb.size(0)
 
+                    # High-Confidence Prediction Accuracy
+                    high_conf_pred = (spsp >= 0.7)
+                    if high_conf_pred.any():
+                        val_hc_correct += (pred[high_conf_pred] == yb[high_conf_pred]).sum().item()
+                        val_hc_total += high_conf_pred.sum().item()
+
+                    # Med-Confidence Prediction Accuracy
+                    med_conf_pred = (spsp >= 0.4) & (spsp < 0.7)
+                    if med_conf_pred.any():
+                        val_mc_correct += (pred[med_conf_pred] == yb[med_conf_pred]).sum().item()
+                        val_mc_total += med_conf_pred.sum().item()
+
+                    # Low-Confidence Prediction Accuracy
+                    low_conf_pred = (spsp < 0.4)
+                    if low_conf_pred.any():
+                        val_lc_correct += (pred[low_conf_pred] == yb[low_conf_pred]).sum().item()
+                        val_lc_total += low_conf_pred.sum().item()
+
+
             val_losses.append(val_loss / len(val_dataloader))
             val_accs.append(val_correct / val_total)
+            val_hc_accs.append(val_hc_correct / (val_hc_total if val_hc_total > 0 else 1))
+            val_mc_accs.append(val_mc_correct / (val_mc_total if val_mc_total > 0 else 1))
+            val_lc_accs.append(val_lc_correct / (val_lc_total if val_lc_total > 0 else 1))
 
             # Update best model across all folds
             val_acc = val_correct / val_total
@@ -142,64 +187,85 @@ def cross_validation(x, y, num_epochs=20, k=5):
         all_train_accs.append(train_accs)
         all_val_accs.append(val_accs)
 
-        # Evaluate accuracy
-        # scores.append(accuracy(model, val_dataloader))
+        hc_scores.append(val_hc_accs[-1])
+        mc_scores.append(val_mc_accs[-1])
+        lc_scores.append(val_lc_accs[-1])
 
-        # Compute ROC-AUC and Log Loss for this fold
-        probs = []
-        true_labels = []
+        
+        spsp_preds, spsp_trues = [], []
         model.eval()
         with torch.no_grad():
             for xb, yb in val_dataloader:
                 output = model(xb)
-                prob = torch.sigmoid(output).squeeze().cpu().numpy()
-                label = yb.squeeze().cpu().numpy()
-                probs.extend(prob.tolist())
-                true_labels.extend(label.tolist())
+                spsp_pred = torch.sigmoid(output).squeeze().cpu().numpy()
+                yb = yb.squeeze().cpu().numpy()
 
-        roc = roc_auc_score(true_labels, probs)
-        logloss = log_loss(true_labels, probs)
+                spsp_preds.extend(spsp_pred.tolist())
+                spsp_trues.extend(yb.tolist())
 
-        precision, recall, _ = precision_recall_curve(true_labels, probs)
+        # Save for Calibration Curve
+        all_spsp_trues.extend(spsp_trues)
+        all_spsp_preds.extend(spsp_preds)
+
+        # Compute ROC-AUC and Log Loss for this fold
+        roc = roc_auc_score(spsp_trues, spsp_preds)
+        logloss = log_loss(spsp_trues, spsp_preds)
+
+        precision, recall, _ = precision_recall_curve(spsp_trues, spsp_preds)
         pr_auc = auc(recall, precision)
 
         all_roc_aucs.append(roc)
         all_log_losses.append(logloss)
         all_pr_aucs.append(pr_auc)
-        
 
-        print(f"\tFold {fold+1} ROC-AUC: {roc:.4f}, PR-AUC: {pr_auc:.4f}, Log Loss: {logloss:.4f}")
+
+        print(f'\tFold {fold+1} ROC-AUC: {roc:.4f}, PR-AUC: {pr_auc:.4f}, Log Loss: {logloss:.4f}')
 
     # Plot average over folds
     avg_train_loss = np.mean(all_train_losses, axis=0)
-    avg_val_loss   = np.mean(all_val_losses, axis=0)
-    avg_train_acc  = np.mean(all_train_accs, axis=0)
-    avg_val_acc    = np.mean(all_val_accs, axis=0)
+    avg_val_loss = np.mean(all_val_losses, axis=0)
+    avg_train_acc = np.mean(all_train_accs, axis=0)
+    avg_val_acc = np.mean(all_val_accs, axis=0)
 
-    plt.figure(figsize=(12, 5))
+    spsp_true, spsp_pred = calibration_curve(all_spsp_trues, all_spsp_preds, n_bins=10, strategy='uniform')
 
-    plt.subplot(1, 2, 1)
+    print(f'\nAvg High Conf Acc across folds: {np.mean(hc_scores)}')
+    print(f'Avg Med Conf Acc across folds: {np.mean(mc_scores)}')
+    print(f'Avg Low Conf Acc across folds: {np.mean(lc_scores)}')
+
+    plt.figure(figsize=(18, 5))
+
+    plt.subplot(1, 3, 1)
     plt.plot(avg_train_loss, label='Train Loss')
     plt.plot(avg_val_loss, label='Val Loss')
-    plt.title("Loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.title('Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
     plt.legend()
 
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, 3, 2)
     plt.plot(avg_train_acc, label='Train Acc')
     plt.plot(avg_val_acc, label='Val Acc')
-    plt.title(f"Accuracy (Best={best_acc*100:.2f}%)")
-    plt.xlabel("Epoch")
-    plt.ylabel("Accuracy")
+    plt.title(f'Accuracy (Best={best_acc*100:.2f}%)')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+
+    plt.subplot(1, 3, 3)
+    plt.plot(spsp_true, spsp_pred, marker='o', label='Model Calibration')
+    plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Perfect Calibration')
+    plt.xlabel('Predicted Probability')
+    plt.ylabel('True Frequency')
+    plt.title('Calibration Curve')
     plt.legend()
 
     plt.tight_layout()
     plt.savefig('train_val_loss_accuracy.png')
+    plt.close()
 
-    print(f"\nAvg ROC-AUC across folds: {np.mean(all_roc_aucs):.4f} +/- {np.std(all_roc_aucs):.4f}")
-    print(f"Avg PR-AUC across folds: {np.mean(all_pr_aucs):.4f} +/- {np.std(all_pr_aucs):.4f}")
-    print(f"Avg Log Loss across folds: {np.mean(all_log_losses):.4f} +/- {np.std(all_log_losses):.4f}")
+    print(f'Avg ROC-AUC across folds: {np.mean(all_roc_aucs):.4f} +/- {np.std(all_roc_aucs):.4f}')
+    print(f'Avg PR-AUC across folds: {np.mean(all_pr_aucs):.4f} +/- {np.std(all_pr_aucs):.4f}')
+    print(f'Avg Log Loss across folds: {np.mean(all_log_losses):.4f} +/- {np.std(all_log_losses):.4f}')
 
 
     return np.mean(scores), np.std(scores), best_acc, best_state
