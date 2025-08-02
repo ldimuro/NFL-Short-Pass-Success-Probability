@@ -183,15 +183,16 @@ def get_data_at_pass_forward(play_data: DataFrame, tracking_data: DataFrame, pla
 
             # Only store plays in which the receiver is at or behind the LoS at the moment of the pass
             if receiver_x_at_pass - los <= 2:
-                print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult']}") #prePenaltyPlayResult
+                print(f"{game_id},{play_id} - LOS:{los}, RECEIVER X (at pass_forward): {receiver_x_at_pass}, result:{play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult']}") # playResult for 2018 data
                 candidate_plays[(game_id, play_id)] = {
                         'receiver_id': receiver_id, 
                         'los': los,
                         'receiver_x': receiver_x_at_pass,
                         'down': play['down'],
                         'yardsToGo': play['yardsToGo'],
-                        'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult'], #prePenaltyPlayResult
+                        'yardsGained': play['yardsGained' if 'yardsGained' in play.index else 'prePenaltyPlayResult'], # playResult for 2018 data
                         'label': estimate_play_success(play),
+                        'play_data': play,
                         'tracking_data': all_22_tracking_features
                 }
         except:
@@ -309,9 +310,9 @@ def normalize_receiver_position(receiver_position):
     if receiver_position in positions:
         pos_val = positions.index(receiver_position)
     else:
-        pos_val = len(positions)    # is it len(positions+1)
+        pos_val = len(positions)    # is it len(positions+1)?
 
-    return pos_val / len(positions) # is it len(positions+1)
+    return pos_val / len(positions) # is it len(positions+1)?
 
 
 
@@ -464,7 +465,7 @@ def get_tensor_batch(input_data, all_players):
             label = int(play_data['label'])
             labels[play] = label
 
-            print(f"created tensor+label for ({game_id},{play_id})")
+            # print(f"created tensor+label for ({game_id},{play_id})")
 
         except Exception as e:
             skipped.append(play)
