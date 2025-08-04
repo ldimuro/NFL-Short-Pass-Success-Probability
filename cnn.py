@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, log_loss, precision_recall_curve, auc
 from sklearn.calibration import calibration_curve
+from sklearn.model_selection import train_test_split
 
 
 class SqueezeExcite(nn.Module):
@@ -25,7 +26,28 @@ class SqueezeExcite(nn.Module):
 
     def forward(self, x):
         scale = self.excitation(self.squeeze(x))
-        return x * scale    
+        return x * scale
+    
+class EarlyStopper:
+    def __init__(self, patience=5, mode='max'):
+        self.patience = patience
+        self.counter  = 0
+        self.best     = -float('inf') if mode == 'max' else float('inf')
+        self.mode     = mode
+        self.early_stop = False
+        self.best_state = None
+
+
+    def __call__(self, metric, model):
+        if (metric > self.best) if self.mode == 'max' else (metric < self.best):
+            self.best = metric
+            self.counter = 0
+            self.best_state = model.state_dict()
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.early_stop = True
+
 
 
 class BasicCNN(nn.Module):
@@ -34,10 +56,6 @@ class BasicCNN(nn.Module):
 
         self.features = nn.Sequential(
             nn.Conv2d(in_channels, 32, 3, padding=1), 
-            nn.BatchNorm2d(32), 
-            nn.ReLU(),
-
-            nn.Conv2d(32, 32, 3, padding=1), 
             nn.BatchNorm2d(32), 
             nn.ReLU(),
 
@@ -61,7 +79,123 @@ class BasicCNN(nn.Module):
         return self.classifier(x).squeeze(-1)
     
 
-def cross_validation(x, y, num_epochs=25, k=5):
+
+
+def train_cnn(x, y, num_epochs=32):
+    x_train, x_test, y_train, y_test = train_test_split(
+        x, y, test_size=0.10, random_state=42, stratify=y
+    )
+    
+    # Datasets/Dataloaders
+    train_data = TensorDataset(x_train, y_train)
+    val_data = TensorDataset(x_test, y_test)
+    train_dataloader = DataLoader(train_data, batch_size=128)    #128
+    val_dataloader = DataLoader(val_data, batch_size=256)        #256
+
+    ## Model/Loss/Optimizer
+    model = BasicCNN()
+    optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-4) # best so far: 1e-4
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor((1 - 0.59) / 0.59)) # handle class imbalance, since SUCCESS label represents 59% of data
+    scheduler = OneCycleLR(optimizer, max_lr=3e-4, epochs=100, steps_per_epoch=len(train_dataloader)) # best so far: 3e-4
+
+    best_val_pr_auc = 0.0
+    best_state = None
+
+    train_losses, val_losses = [], []
+    train_accs = [], []
+    val_pr_aucs = []
+
+    early_stop = EarlyStopper(patience=2, mode='max')
+
+    epochs = num_epochs
+    model.train()
+    for epoch in range(epochs):
+        # print('\tEPOCH', epoch+1)
+        total_loss = 0
+        correct, total = 0, 0
+
+        for xb,yb in train_dataloader:
+            optimizer.zero_grad()
+            output = model(xb)
+            loss = criterion(model(xb), yb.float())
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+
+            total_loss += loss.item()
+
+            spsp = torch.sigmoid(output).squeeze()  # 'Short Pass Success Probability' - THE MAIN METRIC OF THE PROJECT
+
+            # Binary Measure of Success
+            pred = (spsp > 0.5).float()
+            yb = yb.squeeze()
+
+            # Overall Accuracy
+            correct += (pred == yb).sum().item()
+            total += yb.size(0)
+
+
+        train_losses.append(total_loss / len(train_dataloader))
+        train_accs.append(correct / total)
+
+        model.eval()
+        val_loss = 0.0
+        val_preds, val_trues = [], []
+
+
+        with torch.no_grad():
+            for xb, yb in val_dataloader:
+                out = model(xb)
+                val_loss += criterion(out, yb.float()).item()
+                val_preds.extend(torch.sigmoid(out).squeeze().cpu().numpy())
+                val_trues.extend(yb.cpu().numpy())
+
+
+        val_pr_auc = auc(*precision_recall_curve(val_trues, val_preds)[1::-1])
+
+        val_losses.append(val_loss / len(val_dataloader))
+        val_pr_aucs.append(val_pr_auc)
+
+
+        print(f'Epoch {epoch+1:02d} | '
+            f'Train Loss {total_loss/len(train_dataloader):.4f} | '
+            f'Val Loss {val_loss/len(val_dataloader):.4f} | '
+            f'Val PR-AUC {val_pr_auc:.4f}')
+        
+        early_stop(val_pr_auc, model)
+        if early_stop.early_stop:
+            print(f"Early stopping at epoch {epoch+1}")
+            break
+        
+    # ---------- Plot ----------
+    plt.figure(figsize=(12, 4))
+    plt.subplot(1, 3, 1)
+    plt.plot(train_losses, label='Train Loss')
+    plt.plot(val_losses, label='Val Loss')
+    plt.legend(); plt.title('Loss')
+
+
+    plt.subplot(1, 3, 2)
+    plt.plot(val_pr_aucs)
+    plt.title('Val PR-AUC')
+
+
+    plt.subplot(1, 3, 3)
+    spsp_true, spsp_pred = calibration_curve(val_trues, val_preds, n_bins=10)
+    plt.plot(spsp_pred, spsp_true, marker='o'); plt.plot([0,1],[0,1],'--')
+    plt.title('Calibration')
+    plt.tight_layout(); 
+    plt.savefig('training_curves.png'); 
+    plt.close()
+
+    model.load_state_dict(early_stop.best_state)
+    torch.save(early_stop.best_state, 'best_model_withheld.pt')
+
+
+
+
+
+def cross_validation(x, y, num_epochs=33, k=5):
     cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
     scores = []
     hc_scores, mc_scores, lc_scores = [], [], []
@@ -71,7 +205,7 @@ def cross_validation(x, y, num_epochs=25, k=5):
     all_roc_aucs, all_log_losses, all_pr_aucs = [], [], []
     all_spsp_preds, all_spsp_trues = [], [] # for calibration
 
-    best_acc = 0.0
+    best_loss = float('inf')
     best_state = None
 
     for fold,(train_i, val_i) in enumerate(cross_val.split(x, y)):
@@ -175,11 +309,11 @@ def cross_validation(x, y, num_epochs=25, k=5):
             val_mc_accs.append(val_mc_correct / (val_mc_total if val_mc_total > 0 else 1))
             val_lc_accs.append(val_lc_correct / (val_lc_total if val_lc_total > 0 else 1))
 
-            # Update best model across all folds
-            val_acc = val_correct / val_total
-            if val_acc > best_acc:
-                best_acc = val_acc
-                best_state = model.state_dict()
+            # # Update best model across all folds
+            # avg_val_loss = val_loss / len(val_loader)
+            # if val_acc > best_acc:
+            #     best_acc = val_acc
+            #     best_state = model.state_dict()
 
         scores.append(val_accs[-1])
         all_train_losses.append(train_losses)
@@ -202,6 +336,12 @@ def cross_validation(x, y, num_epochs=25, k=5):
 
                 spsp_preds.extend(spsp_pred.tolist())
                 spsp_trues.extend(yb.tolist())
+
+        # Save best model across folds
+        avg_val_loss = val_loss / len(val_dataloader)
+        if avg_val_loss < best_loss:
+            best_loss = avg_val_loss
+            best_state = model.state_dict()
 
         # Save for Calibration Curve
         all_spsp_trues.extend(spsp_trues)
@@ -246,10 +386,17 @@ def cross_validation(x, y, num_epochs=25, k=5):
     plt.subplot(1, 3, 2)
     plt.plot(avg_train_acc, label='Train Acc')
     plt.plot(avg_val_acc, label='Val Acc')
-    plt.title(f'Accuracy (Best={best_acc*100:.2f}%)')
+    plt.title(f'Accuracy')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.legend()
+
+    # plt.subplot(1, 3, 2)
+    # plt.plot(all_pr_aucs, label='Val PR-AUC')
+    # plt.title(f'PR-AUC')
+    # plt.xlabel('Epoch')
+    # plt.ylabel('PR-AUC')
+    # plt.legend()
 
     plt.subplot(1, 3, 3)
     plt.plot(spsp_true, spsp_pred, marker='o', label='Model Calibration')
@@ -268,5 +415,5 @@ def cross_validation(x, y, num_epochs=25, k=5):
     print(f'Avg Log Loss across folds: {np.mean(all_log_losses):.4f} +/- {np.std(all_log_losses):.4f}')
 
 
-    return np.mean(scores), np.std(scores), best_acc, best_state
+    return np.mean(scores), np.std(scores), best_loss, best_state
 
