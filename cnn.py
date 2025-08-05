@@ -7,7 +7,7 @@ from torch.utils.data import random_split
 from torch.optim.lr_scheduler import OneCycleLR
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_auc_score, log_loss, precision_recall_curve, auc
+from sklearn.metrics import roc_auc_score, log_loss, precision_recall_curve, auc, brier_score_loss
 from sklearn.calibration import calibration_curve
 from sklearn.model_selection import train_test_split
 
@@ -31,9 +31,9 @@ class SqueezeExcite(nn.Module):
 class EarlyStopper:
     def __init__(self, patience=5, mode='max'):
         self.patience = patience
-        self.counter  = 0
-        self.best     = -float('inf') if mode == 'max' else float('inf')
-        self.mode     = mode
+        self.counter = 0
+        self.best = -float('inf') if mode == 'max' else float('inf')
+        self.mode = mode
         self.early_stop = False
         self.best_state = None
 
@@ -51,7 +51,7 @@ class EarlyStopper:
 
 
 class BasicCNN(nn.Module):
-    def __init__(self, in_channels=13):
+    def __init__(self, in_channels=2):
         super().__init__()
 
         self.features = nn.Sequential(
@@ -102,7 +102,7 @@ def train_cnn(x, y, num_epochs=32):
     best_state = None
 
     train_losses, val_losses = [], []
-    train_accs = [], []
+    # train_accs = [], []
     val_pr_aucs = []
 
     early_stop = EarlyStopper(patience=2, mode='max')
@@ -136,7 +136,7 @@ def train_cnn(x, y, num_epochs=32):
 
 
         train_losses.append(total_loss / len(train_dataloader))
-        train_accs.append(correct / total)
+        # train_accs.append(correct / total)
 
         model.eval()
         val_loss = 0.0
@@ -195,7 +195,7 @@ def train_cnn(x, y, num_epochs=32):
 
 
 
-def cross_validation(x, y, num_epochs=33, k=5):
+def cross_validation(x, y, num_epochs=33, k=5): #33
     cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
     scores = []
     hc_scores, mc_scores, lc_scores = [], [], []
@@ -218,7 +218,7 @@ def cross_validation(x, y, num_epochs=33, k=5):
         val_dataloader = DataLoader(val_data, batch_size=256)        #256
 
         ## Model/Loss/Optimizer
-        model = BasicCNN()
+        model = BasicCNN(in_channels=x.shape[1])
         optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-4) # best so far: 1e-4
         criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor((1 - 0.59) / 0.59)) # handle class imbalance, since SUCCESS label represents 59% of data
         scheduler = OneCycleLR(optimizer, max_lr=3e-4, epochs=100, steps_per_epoch=len(train_dataloader)) # best so far: 3e-4
@@ -367,9 +367,14 @@ def cross_validation(x, y, num_epochs=33, k=5):
     avg_train_acc = np.mean(all_train_accs, axis=0)
     avg_val_acc = np.mean(all_val_accs, axis=0)
 
+    # Calibration Curve
     spsp_true, spsp_pred = calibration_curve(all_spsp_trues, all_spsp_preds, n_bins=10, strategy='uniform')
+    brier = brier_score_loss(all_spsp_trues, all_spsp_preds)
+    baseline_preds = np.full(len(all_spsp_trues), 0.59)
+    baseline_brier = brier_score_loss(all_spsp_trues, baseline_preds)
+    print(f'\nBrier Score: {brier:.4f} (Baseline: {baseline_brier:.4f})')
 
-    print(f'\nAvg High Conf Acc across folds: {np.mean(hc_scores)}')
+    print(f'Avg High Conf Acc across folds: {np.mean(hc_scores)}')
     print(f'Avg Med Conf Acc across folds: {np.mean(mc_scores)}')
     print(f'Avg Low Conf Acc across folds: {np.mean(lc_scores)}')
 
