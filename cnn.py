@@ -29,7 +29,7 @@ class SqueezeExcite(nn.Module):
         return x * scale
     
 class EarlyStopper:
-    def __init__(self, patience=5, mode='max'):
+    def __init__(self, patience=8, mode='max'):
         self.patience = patience
         self.counter = 0
         self.best = -float('inf') if mode == 'max' else float('inf')
@@ -51,7 +51,7 @@ class EarlyStopper:
 
 
 class BasicCNN(nn.Module):
-    def __init__(self, in_channels=2):
+    def __init__(self, in_channels=13):
         super().__init__()
 
         self.features = nn.Sequential(
@@ -81,7 +81,7 @@ class BasicCNN(nn.Module):
 
 
 
-def train_cnn(x, y, num_epochs=32):
+def train_cnn(x, y, num_epochs=47):
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=0.10, random_state=42, stratify=y
     )
@@ -93,7 +93,7 @@ def train_cnn(x, y, num_epochs=32):
     val_dataloader = DataLoader(val_data, batch_size=256)        #256
 
     ## Model/Loss/Optimizer
-    model = BasicCNN()
+    model = BasicCNN(x.shape[1])
     optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-4) # best so far: 1e-4
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor((1 - 0.59) / 0.59)) # handle class imbalance, since SUCCESS label represents 59% of data
     scheduler = OneCycleLR(optimizer, max_lr=3e-4, epochs=100, steps_per_epoch=len(train_dataloader)) # best so far: 3e-4
@@ -105,7 +105,7 @@ def train_cnn(x, y, num_epochs=32):
     # train_accs = [], []
     val_pr_aucs = []
 
-    early_stop = EarlyStopper(patience=2, mode='max')
+    early_stop = EarlyStopper(patience=8, mode='max')
 
     epochs = num_epochs
     model.train()
@@ -195,7 +195,7 @@ def train_cnn(x, y, num_epochs=32):
 
 
 
-def cross_validation(x, y, num_epochs=33, k=5): #33
+def cross_validation(x, y, num_epochs=35, k=5): #33
     cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
     scores = []
     hc_scores, mc_scores, lc_scores = [], [], []

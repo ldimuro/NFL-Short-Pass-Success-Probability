@@ -465,7 +465,7 @@ def get_tensor_batch(input_data, all_players):
             label = int(play_data['label'])
             labels[play] = label
 
-            # print(f"created tensor+label for ({game_id},{play_id})")
+            print(f"created tensor+label for ({game_id},{play_id})")
 
         except Exception as e:
             skipped.append(play)
