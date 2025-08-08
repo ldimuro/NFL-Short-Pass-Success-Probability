@@ -219,10 +219,10 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
     ax.axhspan(0.4, 0.7, facecolor='orange', alpha=0.2)
     ax.axhspan(0.0, 0.4, facecolor='lightcoral', alpha=0.3)
 
-    prob = spsp_prob_per_frame[:prob_count + 1]
+    prob = spsp_prob_per_frame[:prob_count+1]
     rolling_probs = get_rolling_avg(spsp_prob_per_frame)
         
-    ax.plot(range(prob_count+1), rolling_probs[:prob_count + 1], color='gray', marker='o') #spsp_prob_per_frame[:prob_count + 1]
+    ax.plot(range(prob_count+1), rolling_probs[:prob_count+1], color='black', marker='o') #spsp_prob_per_frame[:prob_count + 1]
 
     # Set fixed axis limits
     x_min, x_max = 0, len(spsp_prob_per_frame)-1
@@ -230,7 +230,7 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
 
-    ax.set_xlabel('Frame')
+    ax.set_xlabel('Seconds After Snap')
     ax.set_ylabel('Success Probability')
     ax.set_title(f'Success Probability of Receiver={receiver_id} over Time')
     ax.grid(True, alpha=0.4)
@@ -241,7 +241,7 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
 
 
 
-def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_id, file_name, zoom=False, loop=True, delete_frame_plots=False):
+def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_id, qb_id, file_name, zoom=False, loop=True, delete_frame_plots=False):
     frame_start = frames['frameId'].min()
     frame_end = frames['frameId'].max()
 
@@ -268,7 +268,7 @@ def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_
         else:
             prob_rolling_avg = 0.0
 
-        plot_frame(frame, play_data, spsp_prob_per_frame[prob_count], prob_rolling_avg, receiver_id, file_name, zoom=zoom)
+        plot_frame_simple(frame, play_data, spsp_prob_per_frame[prob_count], prob_rolling_avg, receiver_id, qb_id, file_name)
         plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file_name)
         prob_count += 1
     
@@ -328,6 +328,174 @@ def get_rolling_avg(prob_list, window_size=3):
             rolling_avg.append(avg)
 
     return rolling_avg
+
+
+
+def rotate_frame_90ccw(frame: DataFrame):
+    # Swap the coordinates (no vertical flip)
+    rot = frame.copy()
+    rot['x'] = frame['y']           # new horizontal coordinate
+    rot['y'] = frame['x']           # new vertical coordinate
+
+    # Rotate the heading
+    if 'o' in rot.columns:
+        # rotate the heading in the opposite direction.
+        rot['o'] = (90 - frame['o'].fillna(0)) % 360
+
+    return rot
+
+
+def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, qb_id, file_name):
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    frame = rotate_frame_90ccw(frame)
+
+    ax.set_facecolor("#4CCE87")#mediumseagreen
+
+    possession_team = play_data['possessionTeam']
+    defensive_team = play_data['defensiveTeam']
+
+    off_color = "#434AFF"#team_colors[play_data['possessionTeam']]
+    def_color = '#000000'#team_colors[play_data['defensiveTeam']]
+
+    # Draw yard lines every 5 yards (horizontal now)
+    for y in range(10, 111, 5):
+        ax.axhline(y=y, color='white', linewidth=2, zorder=2)
+
+    # Draw key vertical lines
+    ax.axhline(y=constants.CENTER_FIELD, color='white', linewidth=2, zorder=2.1)
+
+    # Hash marks (now vertical)
+    ax.axvline(x=constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=2, zorder=0)
+    ax.axvline(x=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=2, zorder=0)
+
+    # 1st down marker (vertical field)
+    ax.axhline(y=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=2.5, zorder=2.2)
+
+    # Line of scrimmage
+    ax.axhline(y=constants.MIDFIELD, color="#384bf6", linewidth=2.5, zorder=2.2)
+
+    teams = frame['team'].unique().tolist() if ('club' not in frame.columns or frame['club'].isna().all()) else frame['club'].unique().tolist()
+    teams.remove('football')
+    color_map = {}
+    color_map[possession_team] = off_color
+    color_map[defensive_team] = def_color 
+
+    # Plot football
+    football = frame[frame['team'] == 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] == 'football']
+    ax.scatter(football['x'], football['y'], c='#dec000', s=40, marker='o', zorder=5)
+    
+    players = frame[frame['team'] != 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] != 'football']
+    off_players = players[players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'] == possession_team]
+    def_players = players[players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'] == defensive_team]
+
+    # Plot offensive players
+    ax.scatter(off_players['x'], off_players['y'], c=off_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), s=250, zorder=4)
+
+    # Plot defensive players
+    ax.scatter(def_players['x'], def_players['y'], c=def_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), s=250, zorder=3.8)
+
+    receiver_row = frame[frame['nflId'] == receiver_id]
+    if not receiver_row.empty:
+        if spsp_rolling_avg >= 0.7:
+            indicator_color = '#15FF00'
+        elif spsp_rolling_avg < 0.4 and spsp_rolling_avg > 0:
+            indicator_color = '#FF2D2D'
+        elif spsp_rolling_avg >= 0.4 and spsp_rolling_avg < 0.7:
+            indicator_color = "#FFA02D"
+        else:
+            indicator_color = "#696969"
+
+        ax.scatter(receiver_row['x'], receiver_row['y'], s=400,
+                   facecolors='none', edgecolors=indicator_color,
+                   linewidths=5, zorder=2.9)
+        
+
+    marker_radius = 0.6
+    arrow_length = 0.9
+
+    # Offensive Arrows
+    ########################################################
+    # Convert angles to radians
+    angles = np.deg2rad(off_players['o'].fillna(0))
+    dx = np.sin(angles)   
+    dy = np.cos(angles)   
+    
+    x_offset = off_players['x'] + dx * marker_radius
+    y_offset = off_players['y'] + dy * marker_radius
+
+    ax.quiver(
+        x_offset, y_offset,   # Offset starting points
+        dx, dy,               # Arrow directions
+        angles='xy',
+        scale_units='xy',
+        scale=1 / arrow_length,
+        color=off_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map),
+        width=0.005,
+        zorder=3.9
+    )
+
+    # Defensive arrows
+    ########################################################
+    # Convert angles to radians
+    angles = np.deg2rad(def_players['o'].fillna(0))
+    dx = np.sin(angles)   
+    dy = np.cos(angles)   
+
+    x_offset = def_players['x'] + dx * marker_radius
+    y_offset = def_players['y'] + dy * marker_radius
+
+    ax.quiver(
+        x_offset, y_offset,   # Offset starting points
+        dx, dy,               # Arrow directions
+        angles='xy',
+        scale_units='xy',
+        scale=1 / arrow_length,
+        color=def_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map),
+        width=0.005,
+        zorder=3.9
+    )
+
+    # Plot dotted line (solid if pass_forward frame) from QB to receiver
+    receiver = frame[frame['nflId'] == receiver_id]
+    qb = frame[frame['nflId'] == qb_id]
+    plt.plot([receiver['x'], qb['x']], [receiver['y'], qb['y']], linestyle='solid' if str(frame.iloc[0]['event']) in constants.PASS_FORWARD else ':', color=indicator_color, linewidth=4)
+
+
+
+    # for _, row in frame.iterrows():
+    #     if (row['x'] > ball_x - zoom_offset_x and row['x'] <= ball_x + zoom_offset_x) and (row['y'] > ball_y - zoom_offset_y and row['y'] <= ball_y + zoom_offset_y) or not zoom:
+    #         label = '' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber'])
+    #         ax.text(row['x'] + (0.6 if zoom else 0.5), row['y'], label, fontsize=16 if zoom else 8, zorder=4)
+
+    # Field settings
+    offset_backfield = 20#15
+    offset_upfield = 20#25
+    plt.ylim(constants.MIDFIELD - offset_backfield, constants.MIDFIELD + offset_upfield)
+    plt.xlim(0, constants.FIELD_WIDTH)
+
+    suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
+
+    if str(play_data['gameId']).startswith('2021'):
+        yards_gained = play_data['prePenaltyPlayResult']
+    elif str(play_data['gameId']).startswith('2022'):
+        yards_gained = play_data['yardsGained']
+
+    # play_state = f"{possession_team} vs. {defensive_team}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
+    # play_state += f", yardsGained: {yards_gained}, {spsp_prob*100:.2f}% SPSP ({spsp_rolling_avg*100:.2f}% rolling)"
+    title = f"{play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}, {spsp_prob*100:.2f}% SPSP ({spsp_rolling_avg*100:.2f}% rolling)"
+    title += f"yardsGained:{yards_gained}, Actual Success:{yards_gained >= play_data['yardsToGo']}"
+    fig.suptitle(title, fontsize=16)
+
+    ax.set_aspect('equal', adjustable='box')
+    ax.grid(False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    plt.tight_layout()
+    plt.savefig(f"play_frames/{file_name}/{file_name}_{frame['frameId'].iloc[0]:04d}.png")
+    plt.close()
+
 
 
 team_colors = {
