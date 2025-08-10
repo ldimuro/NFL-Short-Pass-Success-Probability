@@ -351,26 +351,43 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
 
     frame = rotate_frame_90ccw(frame)
 
-    ax.set_facecolor("#FFFFFF")#mediumseagreen, #4CCE87
+    ax.set_facecolor('#FFFFFF')#mediumseagreen, #4CCE87
+
+    # Field settings
+    offset_backfield = 20#15
+    offset_upfield = 20#25
+    plt.ylim(constants.MIDFIELD - offset_backfield, constants.MIDFIELD + offset_upfield)
+    plt.xlim(0, constants.FIELD_WIDTH)
 
     possession_team = play_data['possessionTeam']
     defensive_team = play_data['defensiveTeam']
 
-    off_color = "#FFFFFF"#team_colors[play_data['possessionTeam']], #434AFF"
+    off_color = '#FFFFFF'#team_colors[play_data['possessionTeam']], #434AFF'
     def_color = '#000000'#team_colors[play_data['defensiveTeam']]
 
-    line_color = "#DCDCDC"
+    line_color = '#DCDCDC'
 
     # Draw yard lines every 5 yards (horizontal now)
-    for y in range(10, 111, 5):
+    for y in range(int(constants.MIDFIELD - offset_backfield), int(constants.MIDFIELD + offset_upfield), 5):
         ax.axhline(y=y, color=line_color, linewidth=2, zorder=2)
 
-    # Draw key vertical lines
-    ax.axhline(y=constants.CENTER_FIELD, color=line_color, linewidth=2, zorder=2.1)
+    # Draw hashmarks every yard
+    hashmark_width = 0.5
+    for y in range(int(constants.MIDFIELD - offset_backfield), int(constants.MIDFIELD + offset_upfield), 1):
+        # Left hashmarks
+        ax.plot([constants.SIDELINE_TO_HASH - hashmark_width/2, constants.SIDELINE_TO_HASH + hashmark_width/2],
+                [y, y], color=line_color, linewidth=2, zorder=2)
 
-    # Hash marks (now vertical)
-    ax.axvline(x=constants.SIDELINE_TO_HASH, color=line_color, linestyle='dotted', linewidth=5, zorder=0)
-    ax.axvline(x=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH, color=line_color, linestyle='dotted', linewidth=5, zorder=0)
+        # Right hashmarks
+        ax.plot([constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH - hashmark_width/2, constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH + hashmark_width/2],
+                [y, y], color=line_color, linewidth=2, zorder=2)
+        
+        # Left sideline hashmarks
+        ax.plot([1, hashmark_width], [y, y], color=line_color, linewidth=2, zorder=2)
+        
+        # Right sideline hashmarks
+        ax.plot([constants.FIELD_WIDTH - hashmark_width, constants.FIELD_WIDTH - 1], [y, y], color=line_color, linewidth=2, zorder=2)
+
 
     # 1st down marker (vertical field)
     ax.axhline(y=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=2.5, zorder=2.2)
@@ -386,7 +403,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
 
     # Plot football
     football = frame[frame['team'] == 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] == 'football']
-    ax.scatter(football['x'], football['y'], c='#dec000', s=40, marker='o', zorder=5)
+    ax.scatter(football['x'], football['y'], c="#a87a2f", s=60, marker='o', zorder=6)
     
     players = frame[frame['team'] != 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] != 'football']
     off_players = players[(players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'] == possession_team) &
@@ -553,7 +570,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
         linestyle='solid' if str(frame.iloc[0]['event']) in constants.PASS_FORWARD else ':', 
         color=indicator_color, 
         linewidth=4,
-        zorder=4.9
+        zorder=4.8
     )
 
 
@@ -563,11 +580,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     #         label = '' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber'])
     #         ax.text(row['x'] + (0.6 if zoom else 0.5), row['y'], label, fontsize=16 if zoom else 8, zorder=4)
 
-    # Field settings
-    offset_backfield = 20#15
-    offset_upfield = 20#25
-    plt.ylim(constants.MIDFIELD - offset_backfield, constants.MIDFIELD + offset_upfield)
-    plt.xlim(0, constants.FIELD_WIDTH)
+    
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
 
