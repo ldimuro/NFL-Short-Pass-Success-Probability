@@ -367,16 +367,13 @@ def cross_validation(x, y, num_epochs=35, k=5): #33
     avg_train_acc = np.mean(all_train_accs, axis=0)
     avg_val_acc = np.mean(all_val_accs, axis=0)
 
+
     # Calibration Curve
     spsp_true, spsp_pred = calibration_curve(all_spsp_trues, all_spsp_preds, n_bins=10, strategy='uniform')
     brier = brier_score_loss(all_spsp_trues, all_spsp_preds)
     baseline_preds = np.full(len(all_spsp_trues), 0.59)
     baseline_brier = brier_score_loss(all_spsp_trues, baseline_preds)
     print(f'\nBrier Score: {brier:.4f} (Baseline: {baseline_brier:.4f})')
-
-    print(f'Avg High Conf Acc across folds: {np.mean(hc_scores)}')
-    print(f'Avg Med Conf Acc across folds: {np.mean(mc_scores)}')
-    print(f'Avg Low Conf Acc across folds: {np.mean(lc_scores)}')
 
     plt.figure(figsize=(18, 5))
 
@@ -415,9 +412,22 @@ def cross_validation(x, y, num_epochs=35, k=5): #33
     plt.savefig('train_val_loss_accuracy.png')
     plt.close()
 
-    print(f'Avg ROC-AUC across folds: {np.mean(all_roc_aucs):.4f} +/- {np.std(all_roc_aucs):.4f}')
-    print(f'Avg PR-AUC across folds: {np.mean(all_pr_aucs):.4f} +/- {np.std(all_pr_aucs):.4f}')
-    print(f'Avg Log Loss across folds: {np.mean(all_log_losses):.4f} +/- {np.std(all_log_losses):.4f}')
+    oof_roc = roc_auc_score(all_spsp_trues, all_spsp_preds)
+    oof_logloss = log_loss(all_spsp_trues, all_spsp_preds)
+    precision, recall, _ = precision_recall_curve(all_spsp_trues, all_spsp_preds)
+    oof_pr_auc = auc(recall, precision)
+    print(f'OOF ROC-AUC: {oof_roc:.4f}')
+    print(f'OOF PR-AUC: {oof_pr_auc:.4f}')
+    print(f'OOF LogLoss: {oof_logloss:.4f}')
+
+    # High/Med/Low Confidence Accuracy
+    print(f'Avg High Conf Acc across folds: {np.mean(hc_scores)}')
+    print(f'Avg Med Conf Acc across folds: {np.mean(mc_scores)}')
+    print(f'Avg Low Conf Acc across folds: {np.mean(lc_scores)}')
+
+    # print(f'Avg ROC-AUC across folds: {np.mean(all_roc_aucs):.4f} +/- {np.std(all_roc_aucs):.4f}')
+    # print(f'Avg PR-AUC across folds: {np.mean(all_pr_aucs):.4f} +/- {np.std(all_pr_aucs):.4f}')
+    # print(f'Avg Log Loss across folds: {np.mean(all_log_losses):.4f} +/- {np.std(all_log_losses):.4f}')
 
 
     return np.mean(scores), np.std(scores), best_loss, best_state
