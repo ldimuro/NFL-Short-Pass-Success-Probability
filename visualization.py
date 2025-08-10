@@ -8,6 +8,7 @@ import shutil
 import numpy as np
 import subprocess
 import imageio_ffmpeg
+import matplotlib.patheffects as pe
 
 def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
@@ -350,24 +351,26 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
 
     frame = rotate_frame_90ccw(frame)
 
-    ax.set_facecolor("#4CCE87")#mediumseagreen
+    ax.set_facecolor("#FFFFFF")#mediumseagreen, #4CCE87
 
     possession_team = play_data['possessionTeam']
     defensive_team = play_data['defensiveTeam']
 
-    off_color = "#434AFF"#team_colors[play_data['possessionTeam']]
+    off_color = "#FFFFFF"#team_colors[play_data['possessionTeam']], #434AFF"
     def_color = '#000000'#team_colors[play_data['defensiveTeam']]
+
+    line_color = "#DCDCDC"
 
     # Draw yard lines every 5 yards (horizontal now)
     for y in range(10, 111, 5):
-        ax.axhline(y=y, color='white', linewidth=2, zorder=2)
+        ax.axhline(y=y, color=line_color, linewidth=2, zorder=2)
 
     # Draw key vertical lines
-    ax.axhline(y=constants.CENTER_FIELD, color='white', linewidth=2, zorder=2.1)
+    ax.axhline(y=constants.CENTER_FIELD, color=line_color, linewidth=2, zorder=2.1)
 
     # Hash marks (now vertical)
-    ax.axvline(x=constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=2, zorder=0)
-    ax.axvline(x=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH, color='white', linestyle='dotted', linewidth=2, zorder=0)
+    ax.axvline(x=constants.SIDELINE_TO_HASH, color=line_color, linestyle='dotted', linewidth=5, zorder=0)
+    ax.axvline(x=constants.FIELD_WIDTH - constants.SIDELINE_TO_HASH, color=line_color, linestyle='dotted', linewidth=5, zorder=0)
 
     # 1st down marker (vertical field)
     ax.axhline(y=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=2.5, zorder=2.2)
@@ -386,33 +389,34 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     ax.scatter(football['x'], football['y'], c='#dec000', s=40, marker='o', zorder=5)
     
     players = frame[frame['team'] != 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] != 'football']
-    off_players = players[players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'] == possession_team]
+    off_players = players[(players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'] == possession_team) &
+                          (players['nflId'] != receiver_id) &
+                          (players['nflId'] != qb_id)]
     def_players = players[players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'] == defensive_team]
+    receiver = players[players['nflId'] == receiver_id]
+    qb = players[players['nflId'] == qb_id]
 
     # Plot offensive players
-    ax.scatter(off_players['x'], off_players['y'], c=off_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), s=250, zorder=4)
+    ax.scatter(
+        off_players['x'], 
+        off_players['y'], 
+        c=off_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), 
+        s=225,
+        edgecolors='black',
+        linewidths=1.5, 
+        zorder=4
+    )
 
     # Plot defensive players
-    ax.scatter(def_players['x'], def_players['y'], c=def_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), s=250, zorder=3.8)
-
-    receiver_row = frame[frame['nflId'] == receiver_id]
-    if not receiver_row.empty:
-        if spsp_rolling_avg >= 0.7:
-            indicator_color = '#15FF00'
-        elif spsp_rolling_avg < 0.4 and spsp_rolling_avg > 0:
-            indicator_color = '#FF2D2D'
-        elif spsp_rolling_avg >= 0.4 and spsp_rolling_avg < 0.7:
-            indicator_color = "#FFA02D"
-        else:
-            indicator_color = "#696969"
-
-        ax.scatter(receiver_row['x'], receiver_row['y'], s=400,
-                   facecolors='none', edgecolors=indicator_color,
-                   linewidths=5, zorder=2.9)
+    ax.scatter(
+        def_players['x'], 
+        def_players['y'], c=def_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), 
+        s=225,
+        zorder=3.8
+    )
         
-
     marker_radius = 0.6
-    arrow_length = 0.9
+    arrow_length = 0.75
 
     # Offensive Arrows
     ########################################################
@@ -431,6 +435,8 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
         scale_units='xy',
         scale=1 / arrow_length,
         color=off_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map),
+        edgecolor='black',
+        linewidth=1.5,
         width=0.005,
         zorder=3.9
     )
@@ -456,10 +462,99 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
         zorder=3.9
     )
 
+
+    if not receiver.empty:
+        if spsp_rolling_avg >= 0.7:
+            indicator_color = "#59FF4A"
+        elif spsp_rolling_avg < 0.4 and spsp_rolling_avg > 0:
+            indicator_color = "#FF6060"
+        elif spsp_rolling_avg >= 0.4 and spsp_rolling_avg < 0.7:
+            indicator_color = "#FFA83F"
+        else:
+            indicator_color = "none"
+
+        ax.scatter(receiver['x'], receiver['y'], s=400,
+                   facecolors='none', edgecolors=indicator_color,
+                   linewidths=5, zorder=2.9)
+        
+    # Plot QB
+    ax.scatter(
+        qb['x'], 
+        qb['y'], 
+        c=qb['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), 
+        s=225,
+        edgecolors='black',
+        linewidths=1.5, 
+        zorder=5
+    )
+
+    # Plot receiver
+    ax.scatter(
+        receiver['x'], 
+        receiver['y'], 
+        c=receiver['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), 
+        s=225,
+        edgecolors='black',
+        linewidths=1.5, 
+        zorder=5
+    )
+
+    # QB Arrow
+    ########################################################
+    # Convert angles to radians
+    angles = np.deg2rad(qb['o'].fillna(0))
+    dx = np.sin(angles)   
+    dy = np.cos(angles)   
+    
+    x_offset = qb['x'] + dx * marker_radius
+    y_offset = qb['y'] + dy * marker_radius
+
+    ax.quiver(
+        x_offset, y_offset,   # Offset starting points
+        dx, dy,               # Arrow directions
+        angles='xy',
+        scale_units='xy',
+        scale=1 / arrow_length,
+        color=qb['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map),
+        edgecolor='black',
+        linewidth=1.5,
+        width=0.005,
+        zorder=4.9
+    )
+
+    # Receiver Arrow
+    ########################################################
+    # Convert angles to radians
+    angles = np.deg2rad(receiver['o'].fillna(0))
+    dx = np.sin(angles)   
+    dy = np.cos(angles)   
+    
+    x_offset = receiver['x'] + dx * marker_radius
+    y_offset = receiver['y'] + dy * marker_radius
+
+    ax.quiver(
+        x_offset, y_offset,   # Offset starting points
+        dx, dy,               # Arrow directions
+        angles='xy',
+        scale_units='xy',
+        scale=1 / arrow_length,
+        color=receiver['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map),
+        edgecolor='black',
+        linewidth=1.5,
+        width=0.005,
+        zorder=4.9
+    )
+
+
     # Plot dotted line (solid if pass_forward frame) from QB to receiver
-    receiver = frame[frame['nflId'] == receiver_id]
-    qb = frame[frame['nflId'] == qb_id]
-    plt.plot([receiver['x'], qb['x']], [receiver['y'], qb['y']], linestyle='solid' if str(frame.iloc[0]['event']) in constants.PASS_FORWARD else ':', color=indicator_color, linewidth=4)
+    plt.plot(
+        [receiver['x'], qb['x']], 
+        [receiver['y'], qb['y']], 
+        linestyle='solid' if str(frame.iloc[0]['event']) in constants.PASS_FORWARD else ':', 
+        color=indicator_color, 
+        linewidth=4,
+        zorder=4.9
+    )
 
 
 
