@@ -241,7 +241,7 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
     ax.legend(
         handles=legend_elements,
         loc='upper left',
-        fontsize=8
+        fontsize=9
     )
 
     ax.set_xlabel('Seconds After Snap')
@@ -411,10 +411,10 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
 
 
     # 1st down marker (vertical field)
-    ax.axhline(y=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=2.5, zorder=2.2, label='1st down marker')
+    ax.axhline(y=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=2.5, zorder=2.2, label='1st Down Marker')
 
     # Line of scrimmage
-    ax.axhline(y=constants.MIDFIELD, color="#384bf6", linewidth=2.5, zorder=2.2, label='line of scrimmage')
+    ax.axhline(y=constants.MIDFIELD, color="#384bf6", linewidth=2.5, zorder=2.2, label='Line of Scrimmage')
 
     teams = frame['team'].unique().tolist() if ('club' not in frame.columns or frame['club'].isna().all()) else frame['club'].unique().tolist()
     teams.remove('football')
@@ -424,7 +424,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
 
     # Plot football
     football = frame[frame['team'] == 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] == 'football']
-    ax.scatter(football['x'], football['y'], c="#a87a2f", s=60, marker='o', zorder=6, label='football')
+    ax.scatter(football['x'], football['y'], c="#a87a2f", s=60, marker='o', zorder=6, label='Football')
     
     players = frame[frame['team'] != 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] != 'football']
     off_players = players[(players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'] == possession_team) &
@@ -443,7 +443,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
         edgecolors='black',
         linewidths=1.5, 
         zorder=4,
-        label='offense'
+        label='Offense'
     )
 
     # Plot defensive players
@@ -452,7 +452,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
         def_players['y'], c=def_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), 
         s=225,
         zorder=3.8,
-        label='defense'
+        label='Defense'
     )
         
     marker_radius = 0.6
@@ -521,7 +521,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
             edgecolors=indicator_color,
             linewidths=5, 
             zorder=2.9,
-            label='receiver success probability'
+            label='Receiver Success Prob'
         )
         
     # Plot QB
@@ -604,14 +604,6 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     )
 
 
-
-    # for _, row in frame.iterrows():
-    #     if (row['x'] > ball_x - zoom_offset_x and row['x'] <= ball_x + zoom_offset_x) and (row['y'] > ball_y - zoom_offset_y and row['y'] <= ball_y + zoom_offset_y) or not zoom:
-    #         label = '' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber'])
-    #         ax.text(row['x'] + (0.6 if zoom else 0.5), row['y'], label, fontsize=16 if zoom else 8, zorder=4)
-
-    
-
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
 
     if str(play_data['gameId']).startswith('2021'):
@@ -634,7 +626,12 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     ax.set_xticks([])
     ax.set_yticks([])
 
-    plt.legend(loc='upper left', ncol=2, markerscale=0.6)
+    plt.legend(
+        loc='upper left', 
+        ncol=2, 
+        markerscale=0.6,
+        fontsize=12
+    )
 
     plt.tight_layout()
     plt.savefig(f"play_frames/{file_name}/{file_name}_{frame['frameId'].iloc[0]:04d}.png")
