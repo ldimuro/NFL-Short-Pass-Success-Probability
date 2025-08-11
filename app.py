@@ -19,7 +19,7 @@ st.markdown(
 )
 
 @st.cache_data(show_spinner=False)   # ← 0‑cost on subsequent calls
-def list_png_paths(folder: str) -> list[Path]:
+def list_png_paths(folder: str):
     """Return a sorted list of absolute Path objects for all *.png* in *folder*."""
     base = Path(__file__).parent / folder
     # sorted() ensures deterministic order (alphabetical)
@@ -35,7 +35,7 @@ def load_image(p: Path) -> bytes:
     with p.open("rb") as f:
         return f.read()   # just the raw bytes – fastest for `st.image`
     
-def load_all_images(paths: list[Path]) -> list[bytes]:
+def load_all_images(paths: list[Path]):
     """Load every PNG in paths and return a list of raw bytes."""
     return [load_image(p) for p in paths]
 
@@ -215,7 +215,7 @@ if 'last_play' not in st.session_state:
 if selected_play != st.session_state.last_play:
     st.session_state.idx = 0
     st.session_state.is_playing = False
-    
+
     # Clear the cached images for the previous play (if any)
     if 'frames' in st.session_state:
         del st.session_state['frames']
