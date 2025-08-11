@@ -8,7 +8,7 @@ import shutil
 import numpy as np
 import subprocess
 import imageio_ffmpeg
-import matplotlib.patheffects as pe
+from matplotlib.patches import Patch
 
 def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
@@ -216,9 +216,9 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
     fig, ax = plt.subplots()
 
     # Color bands
-    ax.axhspan(0.7, 1.0, facecolor='lightgreen', alpha=0.3)
-    ax.axhspan(0.4, 0.7, facecolor='orange', alpha=0.2)
-    ax.axhspan(0.0, 0.4, facecolor='lightcoral', alpha=0.3)
+    ax.axhspan(0.7, 1.0, facecolor=constants.PROB_HIGH, alpha=0.25) #lightgreen
+    ax.axhspan(0.4, 0.7, facecolor=constants.PROB_MED, alpha=0.25) #orange
+    ax.axhspan(0.0, 0.4, facecolor=constants.PROB_LOW, alpha=0.25) #lightcoral
 
     prob = spsp_prob_per_frame[:prob_count+1]
     rolling_probs = get_rolling_avg(spsp_prob_per_frame)
@@ -231,9 +231,23 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
 
+    # Legend
+    legend_elements = [
+        Patch(facecolor="#59FF4A4C", edgecolor='black', label='High Success'),
+        Patch(facecolor="#FFA93F48", edgecolor='black', label='Med Success'),
+        Patch(facecolor="#FF606051", edgecolor='black', label='Low Success')
+    ]
+    ax.legend(
+        handles=legend_elements,
+        loc='upper left',
+        bbox_to_anchor=(0.02, 0.98),
+        frameon=True,
+        facecolor='white'
+    )
+
     ax.set_xlabel('Seconds After Snap')
     ax.set_ylabel('Success Probability')
-    ax.set_title(f'Success Probability of Receiver={receiver_id} over Time')
+    ax.set_title(f'Short Pass Success Probability of Receiver over Time')
     ax.grid(True, alpha=0.4)
 
     plt.tight_layout()
@@ -347,7 +361,9 @@ def rotate_frame_90ccw(frame: DataFrame):
 
 
 def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, qb_id, file_name):
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    plt.subplots_adjust(left=0.25)
 
     frame = rotate_frame_90ccw(frame)
 
@@ -482,13 +498,13 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
 
     if not receiver.empty:
         if spsp_rolling_avg >= 0.7:
-            indicator_color = "#59FF4A"
+            indicator_color = constants.PROB_HIGH
         elif spsp_rolling_avg < 0.4 and spsp_rolling_avg > 0:
-            indicator_color = "#FF6060"
+            indicator_color = constants.PROB_LOW
         elif spsp_rolling_avg >= 0.4 and spsp_rolling_avg < 0.7:
-            indicator_color = "#FFA83F"
+            indicator_color = constants.PROB_MED
         else:
-            indicator_color = "none"
+            indicator_color = 'none'
 
         ax.scatter(receiver['x'], receiver['y'], s=400,
                    facecolors='none', edgecolors=indicator_color,
@@ -580,6 +596,55 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     #         label = '' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber'])
     #         ax.text(row['x'] + (0.6 if zoom else 0.5), row['y'], label, fontsize=16 if zoom else 8, zorder=4)
 
+
+
+    # LEGEND
+    # fig.text(0.02, 0.55, 'LOW', ha='left', va='center', fontsize=10,
+    #      fontweight='bold', color='red')
+    # fig.text(0.05, 0.55, ': SPSP < 40%', ha='left', va='center', fontsize=10, color='black')
+
+    # fig.text(0.02, 0.50, 'MED', ha='left', va='center', fontsize=10,
+    #      fontweight='bold', color='orange')
+    # fig.text(0.05, 0.50, ':40% <= SPSP < 70%', ha='left', va='center', fontsize=10, color='black')
+
+    # fig.text(0.02, 0.45, 'HIGH', ha='left', va='center', fontsize=10,
+    #      fontweight='bold', color='green')
+    # fig.text(0.05, 0.45, 'SPSP >= 70%', ha='left', va='center', fontsize=10, color='black')
+
+    # fig.text(
+    #     0.02, 0.5,
+    #     r"$\mathbf{Success\ Criteria}$\n"
+    #     f'40+% of yards gained on 1st Down\n60+% of yards gained on 2nd Down\n100+% of yards gained on 3rd/4th Down',
+    #     ha='left', va='center',
+    #     fontsize=10,
+    #     bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5')
+    # )
+    fig.text(
+        0.02, 0.56,
+        r"$\mathbf{Success\ Criteria}$",
+        ha='left', va='bottom',
+        fontsize=12, fontweight='bold'
+    )
+    fig.text(
+        0.02, 0.5,
+        "40+% of yards gained on 1st Down\n"
+        "60+% of yards gained on 2nd Down\n"
+        "100+% of yards gained on 3rd/4th Down",
+        ha='left', va='center',
+        fontsize=12,
+        bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5')
+    )
+
+    # fig.text(
+    #     0.02, 0.5,
+    #     r"$\bf{40%}$ of yardsToGo gained on \bf{1st Down}$\n"
+    #     r"$\bf{60%}$ of yardsToGo gained on \bf{2nd Down}$\n"
+    #     r"$\bf{100%}$ of yardsToGo gained on \bf{3rd Down}$\n",
+    #     ha='left', va='center', fontsize=10,
+    #     bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'),
+    #     color='black'
+    # )
+
     
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
@@ -600,7 +665,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     ax.set_xticks([])
     ax.set_yticks([])
 
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.savefig(f"play_frames/{file_name}/{file_name}_{frame['frameId'].iloc[0]:04d}.png")
     plt.close()
 
