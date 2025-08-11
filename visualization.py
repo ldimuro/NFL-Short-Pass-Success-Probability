@@ -9,6 +9,7 @@ import numpy as np
 import subprocess
 import imageio_ffmpeg
 from matplotlib.patches import Patch
+import data_processing
 
 def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
@@ -233,19 +234,23 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
 
     # Legend
     legend_elements = [
-        Patch(facecolor="#59FF4A4C", edgecolor='black', label='High Success'),
-        Patch(facecolor="#FFA93F48", edgecolor='black', label='Med Success'),
-        Patch(facecolor="#FF606051", edgecolor='black', label='Low Success')
+        Patch(facecolor="#59FF4A4C", edgecolor='black', label='High Success Prob'),
+        Patch(facecolor="#FFA93F48", edgecolor='black', label='Med Success Prob'),
+        Patch(facecolor="#FF606051", edgecolor='black', label='Low Success Prob')
     ]
     ax.legend(
         handles=legend_elements,
         loc='upper left',
-        bbox_to_anchor=(0.02, 0.98),
-        frameon=True,
-        facecolor='white'
+        fontsize=8
     )
 
     ax.set_xlabel('Seconds After Snap')
+    tick_positions = np.arange(0, len(spsp_prob_per_frame), 10)
+    ax.set_xticks(tick_positions)
+    tick_labels = tick_positions // 10
+    ax.set_xticklabels(tick_labels)
+
+
     ax.set_ylabel('Success Probability')
     ax.set_title(f'Short Pass Success Probability of Receiver over Time')
     ax.grid(True, alpha=0.4)
@@ -363,7 +368,7 @@ def rotate_frame_90ccw(frame: DataFrame):
 def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, qb_id, file_name):
     fig, ax = plt.subplots(figsize=(14, 8))
 
-    plt.subplots_adjust(left=0.25)
+    # fig.subplots_adjust(left=0.22)
 
     frame = rotate_frame_90ccw(frame)
 
@@ -381,7 +386,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     off_color = '#FFFFFF'#team_colors[play_data['possessionTeam']], #434AFF'
     def_color = '#000000'#team_colors[play_data['defensiveTeam']]
 
-    line_color = '#DCDCDC'
+    line_color = "#D6D6D6"
 
     # Draw yard lines every 5 yards (horizontal now)
     for y in range(int(constants.MIDFIELD - offset_backfield), int(constants.MIDFIELD + offset_upfield), 5):
@@ -406,10 +411,10 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
 
 
     # 1st down marker (vertical field)
-    ax.axhline(y=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=2.5, zorder=2.2)
+    ax.axhline(y=constants.MIDFIELD + play_data['yardsToGo'], color="#f2d627", linewidth=2.5, zorder=2.2, label='1st down marker')
 
     # Line of scrimmage
-    ax.axhline(y=constants.MIDFIELD, color="#384bf6", linewidth=2.5, zorder=2.2)
+    ax.axhline(y=constants.MIDFIELD, color="#384bf6", linewidth=2.5, zorder=2.2, label='line of scrimmage')
 
     teams = frame['team'].unique().tolist() if ('club' not in frame.columns or frame['club'].isna().all()) else frame['club'].unique().tolist()
     teams.remove('football')
@@ -419,7 +424,7 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
 
     # Plot football
     football = frame[frame['team'] == 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] == 'football']
-    ax.scatter(football['x'], football['y'], c="#a87a2f", s=60, marker='o', zorder=6)
+    ax.scatter(football['x'], football['y'], c="#a87a2f", s=60, marker='o', zorder=6, label='football')
     
     players = frame[frame['team'] != 'football'] if ('club' not in frame.columns or frame['club'].isna().all()) else frame[frame['club'] != 'football']
     off_players = players[(players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'] == possession_team) &
@@ -437,7 +442,8 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
         s=225,
         edgecolors='black',
         linewidths=1.5, 
-        zorder=4
+        zorder=4,
+        label='offense'
     )
 
     # Plot defensive players
@@ -445,11 +451,12 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
         def_players['x'], 
         def_players['y'], c=def_players['team' if ('club' not in frame.columns or frame['club'].isna().all()) else 'club'].map(color_map), 
         s=225,
-        zorder=3.8
+        zorder=3.8,
+        label='defense'
     )
         
     marker_radius = 0.6
-    arrow_length = 0.75
+    arrow_length = 0.7
 
     # Offensive Arrows
     ########################################################
@@ -504,11 +511,18 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
         elif spsp_rolling_avg >= 0.4 and spsp_rolling_avg < 0.7:
             indicator_color = constants.PROB_MED
         else:
-            indicator_color = 'none'
+            indicator_color = 'gray'
 
-        ax.scatter(receiver['x'], receiver['y'], s=400,
-                   facecolors='none', edgecolors=indicator_color,
-                   linewidths=5, zorder=2.9)
+        ax.scatter(
+            receiver['x'], 
+            receiver['y'], 
+            s=400,
+            facecolors='none', 
+            edgecolors=indicator_color,
+            linewidths=5, 
+            zorder=2.9,
+            label='receiver success probability'
+        )
         
     # Plot QB
     ax.scatter(
@@ -596,55 +610,6 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     #         label = '' if math.isnan(row['jerseyNumber']) else int(row['jerseyNumber'])
     #         ax.text(row['x'] + (0.6 if zoom else 0.5), row['y'], label, fontsize=16 if zoom else 8, zorder=4)
 
-
-
-    # LEGEND
-    # fig.text(0.02, 0.55, 'LOW', ha='left', va='center', fontsize=10,
-    #      fontweight='bold', color='red')
-    # fig.text(0.05, 0.55, ': SPSP < 40%', ha='left', va='center', fontsize=10, color='black')
-
-    # fig.text(0.02, 0.50, 'MED', ha='left', va='center', fontsize=10,
-    #      fontweight='bold', color='orange')
-    # fig.text(0.05, 0.50, ':40% <= SPSP < 70%', ha='left', va='center', fontsize=10, color='black')
-
-    # fig.text(0.02, 0.45, 'HIGH', ha='left', va='center', fontsize=10,
-    #      fontweight='bold', color='green')
-    # fig.text(0.05, 0.45, 'SPSP >= 70%', ha='left', va='center', fontsize=10, color='black')
-
-    # fig.text(
-    #     0.02, 0.5,
-    #     r"$\mathbf{Success\ Criteria}$\n"
-    #     f'40+% of yards gained on 1st Down\n60+% of yards gained on 2nd Down\n100+% of yards gained on 3rd/4th Down',
-    #     ha='left', va='center',
-    #     fontsize=10,
-    #     bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5')
-    # )
-    fig.text(
-        0.02, 0.56,
-        r"$\mathbf{Success\ Criteria}$",
-        ha='left', va='bottom',
-        fontsize=12, fontweight='bold'
-    )
-    fig.text(
-        0.02, 0.5,
-        "40+% of yards gained on 1st Down\n"
-        "60+% of yards gained on 2nd Down\n"
-        "100+% of yards gained on 3rd/4th Down",
-        ha='left', va='center',
-        fontsize=12,
-        bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5')
-    )
-
-    # fig.text(
-    #     0.02, 0.5,
-    #     r"$\bf{40%}$ of yardsToGo gained on \bf{1st Down}$\n"
-    #     r"$\bf{60%}$ of yardsToGo gained on \bf{2nd Down}$\n"
-    #     r"$\bf{100%}$ of yardsToGo gained on \bf{3rd Down}$\n",
-    #     ha='left', va='center', fontsize=10,
-    #     bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'),
-    #     color='black'
-    # )
-
     
 
     suffixes = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'}
@@ -654,18 +619,24 @@ def plot_frame_simple(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id
     elif str(play_data['gameId']).startswith('2022'):
         yards_gained = play_data['yardsGained']
 
-    # play_state = f"{possession_team} vs. {defensive_team}, Q{play_data['quarter']} {play_data['gameClock']}, {play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}"
-    # play_state += f", yardsGained: {yards_gained}, {spsp_prob*100:.2f}% SPSP ({spsp_rolling_avg*100:.2f}% rolling)"
-    title = f"{play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}, {spsp_prob*100:.2f}% SPSP ({spsp_rolling_avg*100:.2f}% rolling)"
-    title += f"yardsGained:{yards_gained}, Actual Success:{yards_gained >= play_data['yardsToGo']}"
-    fig.suptitle(title, fontsize=16)
+    # TITLES
+    title = f"{play_data['down']}{suffixes[play_data['down']]} & {play_data['yardsToGo']}, Actual Success: "
+    if str(frame.iloc[0]['event']) in constants.PASS_FORWARD:
+        plt.suptitle(title + r"$\bf{" + f"{str(data_processing.estimate_play_success(play_data)).upper()}" + "}$" + f" ({yards_gained} yardsGained by receiver)", fontsize=18)
+        plt.title("Predicted Success at Throw: " + r"$\bf{" + f"{str(spsp_rolling_avg >= 0.5).upper()}" + "}$" + f" ({spsp_rolling_avg*100:.2f}%)", y=-0.06, fontsize=18)
+    else:
+        plt.suptitle(title + r"$\bf{" + f"{str(data_processing.estimate_play_success(play_data)).upper()}" + "}$", fontsize=18)
+        plt.title("Predicted Success if Thrown: " + r"$\bf{" + f"{spsp_rolling_avg*100:.2f}" + "}$" + f"% (rolling avg)", y=-0.06, fontsize=18)
+
 
     ax.set_aspect('equal', adjustable='box')
     ax.grid(False)
     ax.set_xticks([])
     ax.set_yticks([])
 
-    # plt.tight_layout()
+    plt.legend(loc='upper left', ncol=2, markerscale=0.6)
+
+    plt.tight_layout()
     plt.savefig(f"play_frames/{file_name}/{file_name}_{frame['frameId'].iloc[0]:04d}.png")
     plt.close()
 
