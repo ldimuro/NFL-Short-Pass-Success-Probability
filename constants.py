@@ -19,3 +19,8 @@ AUTO_PASS_FORWARD = 'autoevent_passforward'
 
 OFF_POSITIONS = ['QB', 'WR', 'RB', 'TE', 'T', 'G', 'C', 'FB']
 DEF_POSITIONS = ['CB', 'OLB', 'DE', 'DT', 'ILB', 'FS', 'SS', 'NT', 'MLB', 'DB', 'LB']
+
+# Probability Colors
+PROB_HIGH = "#14DE02"
+PROB_MED = "#FFA83F"
+PROB_LOW = "#FF6060"
