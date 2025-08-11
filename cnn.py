@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, log_loss, precision_recall_curve, auc, brier_score_loss
 from sklearn.calibration import calibration_curve
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
 
 
 class SqueezeExcite(nn.Module):
@@ -167,7 +169,7 @@ def train_cnn(x, y, num_epochs=47):
             print(f"Early stopping at epoch {epoch+1}")
             break
         
-    # ---------- Plot ----------
+    # Plot
     plt.figure(figsize=(12, 4))
     plt.subplot(1, 3, 1)
     plt.plot(train_losses, label='Train Loss')
@@ -195,8 +197,8 @@ def train_cnn(x, y, num_epochs=47):
 
 
 
-def cross_validation(x, y, num_epochs=35, k=5): #33
-    cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
+def cross_validation(x, y, seed, num_epochs=35, k=5): #33
+    cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
     scores = []
     hc_scores, mc_scores, lc_scores = [], [], []
 
@@ -217,7 +219,7 @@ def cross_validation(x, y, num_epochs=35, k=5): #33
         train_dataloader = DataLoader(train_data, batch_size=128)    #128
         val_dataloader = DataLoader(val_data, batch_size=256)        #256
 
-        ## Model/Loss/Optimizer
+        # Model/Loss/Optimizer
         model = BasicCNN(in_channels=x.shape[1])
         optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-4) # best so far: 1e-4
         criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor((1 - 0.59) / 0.59)) # handle class imbalance, since SUCCESS label represents 59% of data
@@ -430,5 +432,6 @@ def cross_validation(x, y, num_epochs=35, k=5): #33
     # print(f'Avg Log Loss across folds: {np.mean(all_log_losses):.4f} +/- {np.std(all_log_losses):.4f}')
 
 
-    return np.mean(scores), np.std(scores), best_loss, best_state
+    # return np.mean(scores), np.std(scores), best_loss, best_state
+    return oof_pr_auc, oof_roc, brier, np.mean(hc_scores), np.mean(mc_scores), np.mean(lc_scores), np.mean(scores), best_state
 
