@@ -136,6 +136,18 @@ if 'is_playing' not in st.session_state:
 
 # VIEWERS
 #######################################################################
+
+# ----------  Short explanation ----------
+with st.expander("🔎  What does this app show? (click to expand)"):
+    st.markdown(
+        """
+        **"Short-Pass Success Probability" (SPSP)**  
+        • **Data** - NFL player-tracking (2021-2022) - 3,269 short-pass plays (≤2 yds from the line of scrimmage).  
+        • **Goal** - Predict, *before* the ball is released, the probability that the play will meet the success thresholds (40%/60%/100% of yards-to-go).  
+        • **Output** - **SPSP** (Short-Pass Success Probability) shown as a coloured circle (green ≥ 0.70, orange 0.40-0.69, red < 0.40) and a line-plot of the probability over the frames of the play.  
+        • **Controls** - Play selector, play/pause, frame-step, defender-mask, receiver-shift, and download button.  
+        """
+    )
     
 # left_col, right_col = st.columns([1, 5])
 
