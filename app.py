@@ -1,10 +1,23 @@
 import streamlit as st
 import os
 from PIL import Image
+from pathlib import Path
 import time
 
-st.title("CNN-Based 'Short-Pass Success Probability'")
+st.title("CNN-Based NFL 'Short-Pass Success Probability'")
 st.set_page_config(layout='wide')
+
+# Remove Streamlit auto-padding
+st.markdown(
+    """
+    <style>
+        .stApp { padding:0px !important; }
+        .block-container { padding:2.0rem !important; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 # FUNCTIONS
 #######################################################################
@@ -208,17 +221,19 @@ with main_col2:
     
 # Controls
 spacer1, c1, c2, c3, c4, spacer2 = st.columns([4, 0.5, 0.5, 0.5, 0.5, 4])#c1,c2,c3,c4 = st.columns([1,1,1,8])
+is_first_frame = st.session_state.idx == 0
+is_last_frame = st.session_state.idx == len(frames) - 1
+
 with c1:
-    st.button('<', on_click=lambda: set_idx(st.session_state.idx - 1), disabled=st.session_state.is_playing)
+    st.button('⬅️', on_click=lambda: set_idx(st.session_state.idx - 1), disabled=st.session_state.is_playing or is_first_frame)
 with c2:
-    is_last_frame = st.session_state.idx == len(frames) - 1
-    st.button("▶" if not st.session_state.is_playing else "⏸", #▶ ⏸
+    st.button("▶️" if not st.session_state.is_playing else "⏸️", #▶ ⏸
             on_click=toggle_play,
             disabled=is_last_frame and not st.session_state.is_playing)
 with c3:
-    st.button('\>', on_click=lambda: set_idx(st.session_state.idx + 1), disabled=st.session_state.is_playing)
+    st.button('➡️', on_click=lambda: set_idx(st.session_state.idx + 1), disabled=st.session_state.is_playing or is_last_frame)
 with c4:
-    if st.button('↺'): #↺
+    if st.button('↩️'): #↺
         set_idx(0)
         if not st.session_state.is_playing:
             st.rerun()
