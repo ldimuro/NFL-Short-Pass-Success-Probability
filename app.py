@@ -18,16 +18,37 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+@st.cache_data(show_spinner=False)   # ← 0‑cost on subsequent calls
+def list_png_paths(folder: str) -> list[Path]:
+    """Return a sorted list of absolute Path objects for all *.png* in *folder*."""
+    base = Path(__file__).parent / folder
+    # sorted() ensures deterministic order (alphabetical)
+    return sorted(p for p in base.iterdir() if p.suffix.lower() == ".png")
+
+@st.cache_data(show_spinner=False)
+def load_image(p: Path) -> bytes:
+    """
+    Load a PNG once and return the raw bytes (ready for st.image).
+    Using raw bytes avoids the extra Pillow → NumPy conversion that
+    `st.image` does internally.
+    """
+    with p.open("rb") as f:
+        return f.read()   # just the raw bytes – fastest for `st.image`
+    
+def load_all_images(paths: list[Path]) -> list[bytes]:
+    """Load every PNG in paths and return a list of raw bytes."""
+    return [load_image(p) for p in paths]
+
 
 # FUNCTIONS
 #######################################################################
-def load_frames(path):
-    frames = sorted([
-        os.path.join(path, f)
-        for f in os.listdir(path)
-        if f.endswith('.png')
-    ])
-    return frames
+# def load_frames(path):
+#     frames = sorted([
+#         os.path.join(path, f)
+#         for f in os.listdir(path)
+#         if f.endswith('.png')
+#     ])
+#     return frames
 
 def set_idx(new_idx):
     st.session_state.idx = max(0, min(new_idx, len(frames) - 1))
@@ -145,12 +166,14 @@ if 'idx' not in st.session_state:
 if 'is_playing' not in st.session_state:
     st.session_state.is_playing = False
 
+if 'last_play' not in st.session_state:
+    st.session_state.last_play = None
 
 
 # VIEWERS
 #######################################################################
 
-# ----------  Short explanation ----------
+# Project Decription/Context
 with st.expander(":football: Project Details (click to expand)"):
     st.markdown(
         """
@@ -179,29 +202,62 @@ with col2:
 game_id, play_id = selected_play
 
 # Initialize or check for previous play
-if "last_play" not in st.session_state:
+if 'last_play' not in st.session_state:
     st.session_state.last_play = selected_play
 
 # If user selects a new play, reset frame & stop playback
+# if selected_play != st.session_state.last_play:
+#     st.session_state.idx = 0
+#     st.session_state.is_playing = False
+#     st.session_state.last_play = selected_play
+
+# If the user picks a new play, reset everything and clear the cache
 if selected_play != st.session_state.last_play:
     st.session_state.idx = 0
     st.session_state.is_playing = False
+    
+    # Clear the cached images for the previous play (if any)
+    if 'frames' in st.session_state:
+        del st.session_state['frames']
+    if 'prob_frames' in st.session_state:
+        del st.session_state['prob_frames']
     st.session_state.last_play = selected_play
 
 
+frame_folder = f'play_frames/{game_id}_{play_id}_behind_los_norm_centered'
+prob_folder   = f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs'
+# These calls are cached – they hit the disk only once per folder
+frame_paths = list_png_paths(frame_folder)
+prob_paths  = list_png_paths(prob_folder)
+if not frame_paths or not prob_paths:
+    st.stop()   # nothing to show
+
+
 # Get play frames
-frames = load_frames(f'play_frames/{game_id}_{play_id}_behind_los_norm_centered')
-if not frames:
-    st.stop()
+# frames = load_frames(f'play_frames/{game_id}_{play_id}_behind_los_norm_centered')
+# if not frames:
+#     st.stop()
 
-# Get probability frames
-prob_frames = load_frames(f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs')
-if not prob_frames:
-    st.stop()
+# # Get probability frames
+# prob_frames = load_frames(f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs')
+# if not prob_frames:
+#     st.stop()
 
 
-# Data Views
-# with right_col:
+
+# Store the full list of bytes in session_state so we never read from disk again
+if "frames" not in st.session_state:
+    st.session_state["frames"] = load_all_images(frame_paths)
+if "prob_frames" not in st.session_state:
+    st.session_state["prob_frames"] = load_all_images(prob_paths)
+
+# Short aliases for readability
+frames = st.session_state["frames"]
+prob_frames = st.session_state["prob_frames"]
+
+
+
+
 
 main_col1, main_col2 = st.columns([1.5, 1])
 
