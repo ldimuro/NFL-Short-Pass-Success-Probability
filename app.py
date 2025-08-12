@@ -190,7 +190,7 @@ with st.expander(":football: Project Details (click to expand)"):
 # with left_col:
 col1, col2, col3 = st.columns([2, 1, 2])
 with col2:
-    selected_play = st.radio('Choose a play:', plays)
+    selected_play = st.selectbox('Choose a play:', plays)
 
 # selected_play = st.selectbox('Choose a play:', plays)
 game_id, play_id = selected_play
