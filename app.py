@@ -4,7 +4,8 @@ from PIL import Image
 from pathlib import Path
 import time
 
-st.title("CNN-Based NFL 'Short-Pass Success Probability'")
+# st.title("CNN-Based NFL 'Short-Pass Success Probability'")
+st.markdown("<h1 style='text-align: center;'>CNN-Based NFL 'Short-Pass Success Probability'</h1>", unsafe_allow_html=True)
 st.set_page_config(layout='wide')
 
 # Remove Streamlit auto-padding
@@ -128,21 +129,23 @@ if 'last_play' not in st.session_state:
 #######################################################################
 
 # Project Decription/Context
-with st.expander(":football: Project Details (click to expand)"):
-    st.markdown(
-        """
-        **"Short-Pass Success Probability" (SPSP)**
-        - **Training Data** - NFL player-tracking (2021-2022) - 3,269 short-pass plays (≤2 yds from the line of scrimmage) at the moment the QB throws
-        - **Goal** - Predict (before the ball is released) the probability that the play will meet the **"success"** thresholds:
-          - **40+%** yards-to-go gained on **1st-down**
-          - **60+%** yards-to-go gained on **2nd-down**
-          - **100%** yards-to-go gained on **3rd/4th-down**
-        - **Output** - **SPSP** (Short-Pass Success Probability) of Receiver, indicated by a coloured circle
-          - **<span style='color:green'>GREEN</span>**: 70+% SPSP (high)
-          - **<span style='color:orange'>ORANGE</span>**: 40-69% SPSP (medium)
-          - **<span style='color:red'>RED</span>**: < 40% SPSP (low)
-        """,unsafe_allow_html=True,
-    )
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    with st.expander("🏈 Project Details (click to expand)"):
+        st.markdown(
+            """
+            **"SHORT-PASS SUCCESS PROBABILITY" (SPSP)**
+            - **Training Data** - NFL player-tracking (2021-2022) - 3,269 short-pass plays (≤2 yds from the line of scrimmage) at the moment the QB throws
+            - **Goal** - Predict (before the ball is released) the probability that the play will meet the **"success"** thresholds:
+                - **40+%** yards-to-go gained on **1st-down**
+                - **60+%** yards-to-go gained on **2nd-down**
+                - **100%** yards-to-go gained on **3rd/4th-down**
+            - **Output** - **SPSP** (Short-Pass Success Probability) of Receiver, indicated by a coloured circle:
+                - **<span style='color:green'>GREEN</span>**: 70+% SPSP (high)
+                - **<span style='color:orange'>ORANGE</span>**: 40-69% SPSP (medium)
+                - **<span style='color:red'>RED</span>**: < 40% SPSP (low)
+            """,unsafe_allow_html=True,
+        )
     
 
 # Play Selection View
