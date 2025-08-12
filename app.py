@@ -5,7 +5,8 @@ from pathlib import Path
 import time
 
 # st.title("CNN-Based NFL 'Short-Pass Success Probability'")
-st.markdown("<h1 style='text-align: center;'>CNN-Based NFL 'Short-Pass Success Probability'</h1>", unsafe_allow_html=True)
+# st.markdown("<h1 style='text-align: center;'>CNN-Based NFL 'Short-Pass Success Probability'</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Predicting NFL 'Short-Pass Success' with a CNN</h1>", unsafe_allow_html=True)
 st.set_page_config(layout='wide')
 
 # Remove Streamlit auto-padding
@@ -105,14 +106,26 @@ def toggle_play():
 
 
 plays = [
-    (2021102404, 108), (2021091212, 611), (2022091112, 917), (2021100303, 1951), (2021102410, 3434),
-    (2021091912, 3953), (2021091204, 2742), (2021100400, 262), (2022103008, 2713), (2022092509, 3717),
-    (2022101606, 1414), (2021110100, 1351), (2022091105, 2544), (2021102405, 1665), (2021091206, 1171),
-    (2022092900, 2204), (2022092200, 2589), (2021092605, 3769), (2021091909, 2392), (2022110609, 3668),
-    (2021091203, 672), (2022101603, 2950), (2022100901, 2020), (2022102309, 2438), (2022103007, 1756),
-    (2022102400, 1163), (2022100900, 3109), (2021103105, 4042), (2022091800, 3523), (2021091202, 3512),
-    (2021092610, 3481), (2021101011, 1501), (2022100908, 2851), (2022091901, 1311), (2022102301, 1988),
-    (2022102304, 1087), (2021100304, 484)#, (2022101605, 2054)
+    (2021102404, 108,  '3rd & 3  | Predicted = 🔴, Actual = ❌'), (2021091212, 611,  '2nd & 8  | Predicted = 🔴, Actual = ❌'), 
+    (2022091112, 917,  '2nd & 7  | Predicted = 🟢, Actual = ✅'), (2021100303, 1951, '3rd & 14 | Predicted = 🔴, Actual = ❌'), 
+    # (2021102410, 3434),
+    (2021091912, 3953, '2nd & 6  | Predicted = 🟢, Actual = ✅'), (2021091204, 2742, '1st & 10 | Predicted = 🟢, Actual = ✅'), 
+    (2021100400, 262,  '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022103008, 2713, '4th & 3  | Predicted = 🔴, Actual = ✅'), 
+    (2022092509, 3717, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022101606, 1414, '3rd & 4  | Predicted = 🟢, Actual = ✅'), 
+    (2021110100, 1351, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022091105, 2544, '3rd & 10 | Predicted = 🔴, Actual = ❌'), 
+    (2021102405, 1665, '2nd & 14 | Predicted = 🟠, Actual = ✅'), (2021091206, 1171, '1st & 10 | Predicted = 🟢, Actual = ✅'),
+    (2022092900, 2204, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022092200, 2589, '1st & 10 | Predicted = 🟠, Actual = ✅'), 
+    (2021092605, 3769, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2021091909, 2392, '1st & 10 | Predicted = 🟠, Actual = ✅'), 
+    (2022110609, 3668, '2nd & 6  | Predicted = 🟢, Actual = ✅'), (2021091203, 672,  '1st & 10 | Predicted = 🟢, Actual = ✅'), 
+    (2022101603, 2950, '1st & 10 | Predicted = 🟠, Actual = ✅'), (2022100901, 2020, '1st & 10 | Predicted = 🟢, Actual = ✅'), 
+    (2022102309, 2438, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022103007, 1756, '1st & 10 | Predicted = 🟢, Actual = ✅'),
+    (2022102400, 1163, '3rd & 5  | Predicted = 🟠, Actual = ✅'), (2022100900, 3109, '1st & 10 | Predicted = 🟢, Actual = ❌'), 
+    (2021103105, 4042, '2nd & 10 | Predicted = 🟠, Actual = ❌'), (2022091800, 3523, '2nd & 8  | Predicted = 🔴, Actual = ❌'), 
+    (2021091202, 3512, '2nd & 10 | Predicted = 🔴, Actual = ❌'), (2021092610, 3481, '1st & 10 | Predicted = 🟠, Actual = ❌'), 
+    (2021101011, 1501, '2nd & 12 | Predicted = 🟠, Actual = ❌'), (2022100908, 2851, '2nd & 12 | Predicted = 🔴, Actual = ❌'), 
+    (2022091901, 1311, '2nd & 10 | Predicted = 🔴, Actual = ❌'), (2022102301, 1988, '3rd & 11 | Predicted = 🔴, Actual = ❌'),
+    (2022102304, 1087, '3rd & 10 | Predicted = 🔴, Actual = ❌'), (2021100304, 484,  '2nd & 10 | Predicted = 🟠, Actual = ❌')
+    #, (2022101605, 2054)
 ]
 
 if 'idx' not in st.session_state:
@@ -135,15 +148,15 @@ with col2:
         st.markdown(
             """
             **"SHORT-PASS SUCCESS PROBABILITY" (SPSP)**
-            - **Training Data** - NFL player-tracking (2021-2022) - 3,269 short-pass plays (≤2 yds from the line of scrimmage) at the moment the QB throws
-            - **Goal** - Predict (before the ball is released) the probability that the play will meet the **"success"** thresholds:
+            - **Training Data**: NFL player-tracking (2021-2022) - 3,269 short-pass plays (≤2 yds from the line of scrimmage) at the moment the QB throws
+            - **Goal**: Predict (before the ball is released) the probability that the play will meet the **"success"** thresholds:
                 - **40+%** yards-to-go gained on **1st-down**
                 - **60+%** yards-to-go gained on **2nd-down**
                 - **100%** yards-to-go gained on **3rd/4th-down**
-            - **Output** - **SPSP** (Short-Pass Success Probability) of Receiver, indicated by a coloured circle:
-                - **<span style='color:green'>GREEN</span>**: 70+% SPSP (high)
-                - **<span style='color:orange'>ORANGE</span>**: 40-69% SPSP (medium)
-                - **<span style='color:red'>RED</span>**: < 40% SPSP (low)
+            - **Output**: **SPSP** (Short-Pass Success Probability), indicated by a coloured circle around the intended receiver:
+                - 🟢 = **<span style='color:green'>70+%</span>** SPSP (high)
+                - 🟠 = **<span style='color:orange'>40-69%</span>** SPSP (medium)
+                - 🔴 = **<span style='color:red'>< 40%</span>** SPSP (low)
             """,unsafe_allow_html=True,
         )
     
@@ -153,7 +166,7 @@ col1, col2, col3 = st.columns([2, 1, 2])
 with col2:
     selected_play = st.selectbox('Choose a play:', plays)
 
-game_id, play_id = selected_play
+game_id, play_id, _ = selected_play
 
 # Initialize or check for previous play
 if 'last_play' not in st.session_state:
@@ -211,20 +224,20 @@ with main_col2:
                     use_container_width=True)
     
 # Controls
-spacer1, c1, c2, c3, c4, spacer2 = st.columns([4, 0.5, 0.5, 0.5, 0.5, 4])#c1,c2,c3,c4 = st.columns([1,1,1,8])
+spacer1, frame_back_btn, play_pause_btn, frame_forward_btn, replay_btn, spacer2 = st.columns([4, 0.5, 0.5, 0.5, 0.5, 4])
 is_first_frame = st.session_state.idx == 0
 is_last_frame = st.session_state.idx == len(frames) - 1
 
-with c1:
-    st.button('⬅️', on_click=lambda: set_idx(st.session_state.idx - 1), disabled=st.session_state.is_playing or is_first_frame)
-with c2:
-    st.button("▶️" if not st.session_state.is_playing else "⏸️", #▶ ⏸
+with frame_back_btn:
+    st.button('\u23EA\uFE0E', on_click=lambda: set_idx(st.session_state.idx - 1), disabled=st.session_state.is_playing or is_first_frame)
+with play_pause_btn:
+    st.button('\u25B6\uFE0E' if not st.session_state.is_playing else '\u23F8\uFE0E', #▶ ⏸
             on_click=toggle_play,
             disabled=is_last_frame and not st.session_state.is_playing)
-with c3:
-    st.button('➡️', on_click=lambda: set_idx(st.session_state.idx + 1), disabled=st.session_state.is_playing or is_last_frame)
-with c4:
-    if st.button('↩️'): #↺
+with frame_forward_btn:
+    st.button('\u23E9\uFE0E', on_click=lambda: set_idx(st.session_state.idx + 1), disabled=st.session_state.is_playing or is_last_frame)
+with replay_btn:
+    if st.button('\u21BA\uFE0E'): #↺
         set_idx(0)
         if not st.session_state.is_playing:
             st.rerun()
@@ -233,7 +246,7 @@ with c4:
 
 
 # Playback Loop
-fps = 9#10
+fps = 8#10
 frame_delay = 1.0 / fps
 if st.session_state.is_playing:
     while st.session_state.idx < len(frames) - 1:
