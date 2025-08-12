@@ -18,31 +18,26 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-@st.cache_data(show_spinner=False)   # 0‑cost after first call
-def list_png_paths(folder: str) -> list[Path]:
-    """Return a sorted list of Path objects for all .png in folder."""
-    base = Path(__file__).parent / folder
-    return sorted(p for p in base.iterdir() if p.suffix.lower() == ".png")
-@st.cache_data(show_spinner=False)
-def load_png_bytes(p: Path) -> bytes:
-    """Read a PNG once and return the raw bytes (fastest for st.image)."""
-    return p.read_bytes()
-def load_all_frames(folder: str) -> list[bytes]:
-    """Load **all** PNGs in a folder and return a list of raw bytes."""
-    paths = list_png_paths(folder)
-    # The list comprehension calls the cached load_png_bytes for each file
-    return [load_png_bytes(p) for p in paths]
-
 
 # FUNCTIONS
 #######################################################################
-# def load_frames(path):
-#     frames = sorted([
-#         os.path.join(path, f)
-#         for f in os.listdir(path)
-#         if f.endswith('.png')
-#     ])
-#     return frames
+
+# Return a sorted list of Path objects for all .png in folder
+@st.cache_data(show_spinner=False)   # 0‑cost after first call
+def list_png_paths(folder: str) -> list[Path]:
+    base = Path(__file__).parent / folder
+    return sorted(p for p in base.iterdir() if p.suffix.lower() == ".png")
+
+# Read a PNG once and return the raw bytes (fastest for st.image)
+@st.cache_data(show_spinner=False)
+def load_png_bytes(p: Path) -> bytes:
+    return p.read_bytes()
+
+# Load ALL PNGs in a folder and return a list of raw bytes
+def load_all_frames(folder: str) -> list[bytes]:
+    paths = list_png_paths(folder)
+    # The list comprehension calls the cached load_png_bytes for each file
+    return [load_png_bytes(p) for p in paths]
 
 def set_idx(new_idx):
     st.session_state.idx = max(0, min(new_idx, len(frames) - 1))
@@ -51,8 +46,6 @@ def toggle_play():
     st.session_state.is_playing = not st.session_state.is_playing
 
 #######################################################################
-
-# Test
 
 # ESSENTIAL PLAYS:
 # - (2022091112, 917)  - (1) receiver becomes open as he passes the DL
@@ -109,39 +102,6 @@ def toggle_play():
 # TOTAL (1) examples (no Falses) = 22
 # TOTAL (0) examples (no Falses) = 17
 
-# plays = [
-#     (2021103110, 99),   # Why is this labelled negative?
-#     (2022091103, 3527),
-#     (2022100900, 3109),
-#     (2021100305, 3091),
-#     (2021101708, 3260),
-#     (2022102311, 1932),
-#     (2021103105, 4042),
-#     (2022091804, 475),
-#     (2021091211, 528),
-#     (2021103105, 2931),
-#     (2022091800, 3523),
-#     (2021091202, 3512),
-#     (2021092610, 3481),
-#     (2021101011, 1501),
-#     (2022100908, 2851),
-#     (2022091800, 563),
-#     (2022101604, 3296),
-#     (2022091901, 1311),
-#     (2022110600, 3074),
-#     (2022100213, 3431),
-#     (2022100912, 1570),
-#     (2022102301, 1988),
-#     (2021092600, 370),  # Why is this labelled negative?
-#     (2022110603, 1418),
-#     (2022102304, 1087),
-#     (2022101609, 1635),
-#     (2021101012, 3695), # Why is this labelled negative?
-#     (2021100304, 484),
-#     (2022101605, 2054),
-#     (2021092000, 1637),
-#     (2022100901, 3622),
-# ]
 
 plays = [
     (2021102404, 108), (2021091212, 611), (2022091112, 917), (2021100303, 1951), (2021102410, 3434),
@@ -184,33 +144,25 @@ with st.expander(":football: Project Details (click to expand)"):
         """,unsafe_allow_html=True,
     )
     
-# left_col, right_col = st.columns([1, 5])
 
 # Play Selection View
-# with left_col:
 col1, col2, col3 = st.columns([2, 1, 2])
 with col2:
     selected_play = st.selectbox('Choose a play:', plays)
 
-# selected_play = st.selectbox('Choose a play:', plays)
 game_id, play_id = selected_play
 
 # Initialize or check for previous play
 if 'last_play' not in st.session_state:
     st.session_state.last_play = selected_play
 
-# If user selects a new play, reset frame & stop playback
-# if selected_play != st.session_state.last_play:
-#     st.session_state.idx = 0
-#     st.session_state.is_playing = False
-#     st.session_state.last_play = selected_play
-
 # If the user picks a new play, reset everything and clear the cache
 if selected_play != st.session_state.last_play:
     # Reset index / playback flag
     st.session_state.idx = 0
     st.session_state.is_playing = False
-    # Clear any previously cached frames (so we don’t keep old play in memory)
+
+    # Clear any previously cached frames (don’t keep old play in memory)
     for key in ("frames", "prob_frames"):
         if key in st.session_state:
             del st.session_state[key]
@@ -219,46 +171,23 @@ if selected_play != st.session_state.last_play:
 
 frame_folder = f'play_frames/{game_id}_{play_id}_behind_los_norm_centered'
 prob_folder   = f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs'
-# These calls are cached – they hit the disk only once per folder
+
+# These calls are cached, hit the disk only once per folder
 frame_paths = list_png_paths(frame_folder)
 prob_paths  = list_png_paths(prob_folder)
 if not frame_paths or not prob_paths:
-    st.error("No frames found for this play.")
+    st.error('No frames found for this play.')
     st.stop()   # nothing to show
 
 # Store the full list of bytes in session_state so we never read from disk again
-if "frames" not in st.session_state:
-    st.session_state["frames"] = [load_png_bytes(p) for p in frame_paths]
-if "prob_frames" not in st.session_state:
-    st.session_state["prob_frames"] = [load_png_bytes(p) for p in prob_paths]
-# Short aliases – now they are **bytes**, not file‑paths
-frames = st.session_state["frames"]
-prob_frames = st.session_state["prob_frames"]
+if 'frames' not in st.session_state:
+    st.session_state['frames'] = [load_png_bytes(p) for p in frame_paths]
+if 'prob_frames' not in st.session_state:
+    st.session_state['prob_frames'] = [load_png_bytes(p) for p in prob_paths]
 
-
-# Get play frames
-# frames = load_frames(f'play_frames/{game_id}_{play_id}_behind_los_norm_centered')
-# if not frames:
-#     st.stop()
-
-# # Get probability frames
-# prob_frames = load_frames(f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs')
-# if not prob_frames:
-#     st.stop()
-
-
-
-# Store the full list of bytes in session_state so we never read from disk again
-# if "frames" not in st.session_state:
-#     st.session_state["frames"] = load_all_images(frame_paths)
-# if "prob_frames" not in st.session_state:
-#     st.session_state["prob_frames"] = load_all_images(prob_paths)
-
-# # Short aliases for readability
-# frames = st.session_state["frames"]
-# prob_frames = st.session_state["prob_frames"]
-
-
+# Short aliases – now they are bytes, not file‑paths
+frames = st.session_state['frames']
+prob_frames = st.session_state['prob_frames']
 
 
 
