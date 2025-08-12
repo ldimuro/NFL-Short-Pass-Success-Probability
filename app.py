@@ -230,7 +230,7 @@ with c4:
 
 
 # Playback Loop
-fps = 10
+fps = 9#10
 frame_delay = 1.0 / fps
 if st.session_state.is_playing:
     while st.session_state.idx < len(frames) - 1:
