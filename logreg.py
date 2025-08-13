@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, log_loss, precision_recall_curve, auc, brier_score_loss
 from sklearn.calibration import calibration_curve
 
-# Model: Logistic Regression on flattened (13,11,10)
+# Logistic Regression on flattened (13,11,10)
 class LogisticReg(nn.Module):
     def __init__(self, in_dim=13*11*10):
         super().__init__()
@@ -18,7 +18,7 @@ class LogisticReg(nn.Module):
         return self.linear(x)
 
 
-def cross_validation_lr(x, y, seed, num_epochs=6, k=5):
+def cross_validation_lr(x, y, seed, num_epochs=4, k=5):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     cross_val = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
 
@@ -33,7 +33,7 @@ def cross_validation_lr(x, y, seed, num_epochs=6, k=5):
     best_loss  = float('inf')
     best_state = None
 
-    pos_rate = 0.59  # SUCCESS share in your data
+    pos_rate = 0.59  # SUCCESS class percentage
     pos_weight = torch.tensor((1 - pos_rate) / pos_rate, dtype=torch.float32, device=device)
 
     for fold, (train_i, val_i) in enumerate(cross_val.split(x, y)):
