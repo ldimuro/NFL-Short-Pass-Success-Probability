@@ -210,7 +210,7 @@ def cross_validation_lr(x, y, seed, num_epochs=4, k=5):
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig('train_val_loss_accuracy_logreg.png')
+    plt.savefig('plots/train_val_loss_accuracy_logreg.png')
     plt.close()
 
     # Out-of-fold metrics (global)

@@ -407,7 +407,7 @@ def cross_validation(x, y, seed, num_epochs=35, k=5): #33
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig('train_val_loss_accuracy.png')
+    plt.savefig('plots/train_val_loss_accuracy_cnn.png')
     plt.close()
 
     oof_roc = roc_auc_score(all_spsp_trues, all_spsp_preds)
@@ -429,5 +429,5 @@ def cross_validation(x, y, seed, num_epochs=35, k=5): #33
 
 
     # return np.mean(scores), np.std(scores), best_loss, best_state
-    return oof_pr_auc, oof_roc, brier, np.mean(hc_scores), np.mean(mc_scores), np.mean(lc_scores), np.mean(scores), best_state
+    return oof_pr_auc, oof_roc, brier, np.mean(hc_scores), np.mean(mc_scores), np.mean(lc_scores), np.mean(scores), best_state, all_spsp_trues, all_spsp_preds
 
