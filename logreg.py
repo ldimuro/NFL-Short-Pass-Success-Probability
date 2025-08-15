@@ -47,7 +47,7 @@ def cross_validation_lr(x, y, seed, num_epochs=4, k=5):
 
         # Model/Loss/Optimizer
         model = LogisticReg(in_dim=13*11*10).to(device)
-        criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+        criterion = nn.BCEWithLogitsLoss()#pos_weight=pos_weight)
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4, weight_decay=1e-4)
 
         train_losses, val_losses = [], []
