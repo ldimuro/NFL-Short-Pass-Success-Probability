@@ -244,18 +244,15 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
         loc='upper left',
         fontsize=12
     )
-
-    # ax.set_xlabel('Seconds After Snap')
-    # tick_positions = np.arange(0, len(spsp_prob_per_frame), 10)
-    # ax.set_xticks(tick_positions)
-    # tick_labels = tick_positions // 10
-    # ax.set_xticklabels(tick_labels)
-
-    ax.set_xlabel('Seconds After Snap', fontsize=18)
-    n_ticks = max(4, len(spsp_prob_per_frame) // 10)   # at least 4
-    tick_positions = np.linspace(0, len(spsp_prob_per_frame)-1, n_ticks, dtype=int)
+    
+    fps = 10
+    total_seconds = len(spsp_prob_per_frame) / fps
+    n_ticks = max(4, int(np.floor(total_seconds)) + 1)
+    tick_times = np.linspace(0, total_seconds, n_ticks)
+    tick_positions = (tick_times * fps).astype(int)
     ax.set_xticks(tick_positions)
-    ax.set_xticklabels(tick_positions // 10, fontsize=14)
+    ax.set_xticklabels([f"{t:.2f}" for t in tick_times], fontsize=14)
+    ax.set_xlabel('Seconds After Snap', fontsize=18)
 
     ax.set_ylabel('Success Probability (%)', fontsize=18)
     ax.tick_params(axis='y', labelsize=14)
@@ -301,32 +298,46 @@ def create_play_gif(play_data, frames: DataFrame, spsp_prob_per_frame, receiver_
         plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file_name)
         prob_count += 1
     
-    frames_folder = f'play_frames/{file_name}'
-    gif_output_path = f"play_gifs/{file_name}{'_zoomed' if zoom else ''}.gif"
+    # frames_folder = f'play_frames/{file_name}'
+    # gif_output_path = f"play_gifs/{file_name}{'_zoomed' if zoom else ''}.gif"
+    frames_folders = [f"play_frames/{file_name}", f"play_prob_frames/{file_name}_probs"]
+    gif_output_paths = [f"play_gifs/{file_name}.gif", f"play_prob_gifs/{file_name}_probs.gif"]
 
-    # Get list of image filenames in sorted order
-    frame_files = sorted([
-        os.path.join(frames_folder, fname)
-        for fname in os.listdir(frames_folder)
-        if fname.endswith('.png')
-    ])
+    for i in range(len(frames_folders)):
 
-    # Create and save GIF
-    loops = 0 if loop else 1
-    with imageio.get_writer(gif_output_path, mode='I', duration=0.1, loop=loops) as writer:
-        for filename in frame_files:
-            image = imageio.imread(filename)
-            writer.append_data(image)
+        # Get list of image filenames in sorted order
+        frame_files = sorted([
+            os.path.join(frames_folders[i], fname)
+            for fname in os.listdir(frames_folders[i])
+            if fname.endswith('.png')
+        ])
 
-    # Delete individual frame plots when completed
-    if delete_frame_plots:
-        if os.path.exists(frames_folder):
-            shutil.rmtree(frames_folder)
-            print(f'Deleted folder: {frames_folder}')
-        else:
-            print(f'Folder not found: {frames_folder}')
+        # Load all frames as images
+        images = [imageio.imread(f) for f in frame_files]
 
-    print('gif created')
+        # Build per-frame durations, add a pause at the end
+        normal_duration = 100   # 0.1s for regular frames
+        pause_duration = 3000   # 3s hold on last frame
+        durations = [normal_duration] * (len(images) - 1) + [pause_duration]
+
+        # Save GIF with per-frame durations
+        loops = 0 if loop else 1
+        imageio.mimsave(
+            gif_output_paths[i],
+            images,
+            duration=durations,
+            loop=loops 
+        )
+
+        # Delete individual frame plots when completed
+        if delete_frame_plots:
+            if os.path.exists(frames_folders[i]):
+                shutil.rmtree(frames_folders[i])
+                print(f'Deleted folder: {frames_folders[i]}')
+            else:
+                print(f'Folder not found: {frames_folders[i]}')
+
+        print('gif created')
 
 
 def convert_gif_to_mp4(gif_path, output_path):
