@@ -21,6 +21,6 @@ OFF_POSITIONS = ['QB', 'WR', 'RB', 'TE', 'T', 'G', 'C', 'FB']
 DEF_POSITIONS = ['CB', 'OLB', 'DE', 'DT', 'ILB', 'FS', 'SS', 'NT', 'MLB', 'DB', 'LB']
 
 # Probability Colors
-PROB_HIGH = "#14DE02"
-PROB_MED = "#FFA83F"
-PROB_LOW = "#FF6060"
+PROB_HIGH = "#15FF00"#"#14DE02"
+PROB_MED = "#FF8C00"#"#FFA83F"
+PROB_LOW = "#E11414"#"#FF6060"
