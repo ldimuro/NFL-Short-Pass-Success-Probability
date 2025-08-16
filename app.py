@@ -6,7 +6,7 @@ import time
 
 # st.title("CNN-Based NFL 'Short-Pass Success Probability'")
 # st.markdown("<h1 style='text-align: center;'>CNN-Based NFL 'Short-Pass Success Probability'</h1>", unsafe_allow_html=True)
-st.markdown("<h1 style='text-align: center;'>Predicting NFL 'Short-Pass Success' with a CNN</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Predicting NFL 'Short Pass Success' with a CNN</h1>", unsafe_allow_html=True)
 st.set_page_config(layout='wide')
 
 # Remove Streamlit auto-padding
@@ -162,7 +162,7 @@ with col2:
     
 
 # Play Selection View
-col1, col2, col3 = st.columns([2, 1, 2])
+col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     selected_play = st.selectbox('Choose a play:', plays)
 
@@ -207,7 +207,7 @@ prob_frames = st.session_state['prob_frames']
 
 
 
-main_col1, main_col2 = st.columns([1.5, 1])
+main_col1, main_col2 = st.columns([1, 1])#st.columns([1.5, 1])
 
 # Main Play View
 with main_col1:
@@ -246,7 +246,7 @@ with replay_btn:
 
 
 # Playback Loop
-fps = 8#10
+fps = 9#10
 frame_delay = 1.0 / fps
 if st.session_state.is_playing:
     while st.session_state.idx < len(frames) - 1:
