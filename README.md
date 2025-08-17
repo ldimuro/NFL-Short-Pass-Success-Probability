@@ -65,20 +65,20 @@ The CNN performance was measured against a Logistic Regression model (using the 
 ## Visual Demo
 [Demo of CNN predictions](https://nfl-short-pass-success-probability.streamlit.app/)
 
-# "Success" Example
+## "Success" Example
 
 Play Visualization         |  Receiver Success Probability Visualization
 :-------------------------:|:-------------------------:
 ![](play_gifs/2021091204_2742.gif)  |  ![](play_prob_gifs/2021091204_2742_probs.gif)
 
-# "No Success" Example
+## "No Success" Example
 
 Play Visualization         |  Receiver Success Probability Visualization
 :-------------------------:|:-------------------------:
 ![](play_gifs/2022091105_2544.gif)  |  ![](play_prob_gifs/2022091105_2544_probs.gif)
 
 ---
-# Applications/Use Cases
+## Applications/Use Cases
 - **Receiver openness**: calculate the average SPSP for every play a receiver runs a short route, can answer the question “how often is this receiver getting open around the line of scrimmage?” The standard deviation of these SPSPs can also be used to determine how “consistent” a receiver gets open
 - **Defensive formation vulnerability**: collect all SPSPs against a specific opponent and calculate the average SPSP for each defensive formation (e.g., Cover-3, 4-man front, etc.) to reveal which defensive formations and alignments are most susceptible to short passes
 - **“Clutchness”**: count the number of times the SPSP predicted no success for a receiver’s play but the play ended up as a success, could potentially quantify the receiver’s ability to “turn nothing into something”
