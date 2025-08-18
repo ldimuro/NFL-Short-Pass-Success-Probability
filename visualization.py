@@ -10,7 +10,7 @@ import subprocess
 import imageio_ffmpeg
 from matplotlib.patches import Patch
 import data_processing
-from matplotlib.ticker import PercentFormatter
+from matplotlib.ticker import PercentFormatter, MultipleLocator, FuncFormatter
 
 def plot_frame(frame, play_data, spsp_prob, spsp_rolling_avg, receiver_id, file_name, zoom):
     fig, ax = plt.subplots(figsize=(12, 7.5 if zoom else 6.5))
@@ -244,14 +244,19 @@ def plot_frame_prob(frame_id, spsp_prob_per_frame, receiver_id, prob_count, file
         loc='upper left',
         fontsize=12
     )
-    
+
+    # Format frames to seconds on x-axis
     fps = 10
-    total_seconds = len(spsp_prob_per_frame) / fps
-    n_ticks = max(4, int(np.floor(total_seconds)) + 1)
-    tick_times = np.linspace(0, total_seconds, n_ticks)
-    tick_positions = (tick_times * fps).astype(int)
-    ax.set_xticks(tick_positions)
-    ax.set_xticklabels([f"{t:.2f}" for t in tick_times], fontsize=14)
+    ax.set_xlim(0, len(spsp_prob_per_frame) - 1)
+    if len(spsp_prob_per_frame) >= 30:
+        step_frames = fps
+        fmt = lambda v, pos: f'{v/fps:.0f}'
+    else:
+        step_frames = fps / 2
+        fmt = lambda v, pos: f'{v/fps:.1f}'
+    ax.xaxis.set_major_locator(MultipleLocator(step_frames))
+    ax.xaxis.set_major_formatter(FuncFormatter(fmt))
+    ax.tick_params(axis='x', labelsize=14)
     ax.set_xlabel('Seconds After Snap', fontsize=18)
 
     ax.set_ylabel('Success Probability (%)', fontsize=18)
