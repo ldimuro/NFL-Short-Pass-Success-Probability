@@ -62,24 +62,24 @@ def toggle_play():
 
 
 plays = [
-    (2021102404, 108,  '3rd & 3  | 2 yd gain  | Predicted = 🔴, Actual = ❌'), (2021091212, 611,  '2nd & 8  | 1 yd gain  | Predicted = 🔴, Actual = ❌'), 
-    (2022091112, 917,  '2nd & 7  | 22 yd gain | Predicted = 🟢, Actual = ✅'), (2021100303, 1951, '3rd & 14 | 9 yd gain  | Predicted = 🔴, Actual = ❌'), 
-    (2021091912, 3953, '2nd & 6  | 5 yd gain  | Predicted = 🟢, Actual = ✅'), (2021091204, 2742, '1st & 10 | 11 yd gain | Predicted = 🟢, Actual = ✅'), 
-    (2021100400, 262,  '1st & 10 | 7 yd gain  | Predicted = 🟢, Actual = ✅'), (2022103008, 2713, '4th & 3  | 9 yd gain  | Predicted = 🔴, Actual = ✅'), 
-    (2022092509, 3717, '1st & 10 | 6 yd gain  | Predicted = 🟢, Actual = ✅'), (2022101606, 1414, '3rd & 4  | 5 yd gain  | Predicted = 🟢, Actual = ✅'), 
-    (2021110100, 1351, '1st & 10 | 7 yd gain  | Predicted = 🟢, Actual = ✅'), (2022091105, 2544, '3rd & 10 | 4 yd gain  | Predicted = 🔴, Actual = ❌'), 
-    (2021102405, 1665, '2nd & 14 | 14 yd gain | Predicted = 🟠, Actual = ✅'), (2021091206, 1171, '1st & 10 | 14 yd gain | Predicted = 🟢, Actual = ✅'),
-    (2022092900, 2204, '1st & 10 | 8 yd gain  | Predicted = 🟢, Actual = ✅'), (2022092200, 2589, '1st & 10 | 12 yd gain | Predicted = 🟠, Actual = ✅'), 
-    (2021092605, 3769, '1st & 10 | 9 yd gain  | Predicted = 🟢, Actual = ✅'), (2021091909, 2392, '1st & 10 | 6 yd gain  | Predicted = 🟠, Actual = ✅'), 
-    (2022110609, 3668, '2nd & 6  | 6 yd gain  | Predicted = 🟢, Actual = ✅'), (2021091203, 672,  '1st & 10 | 9 yd gain  | Predicted = 🟢, Actual = ✅'), 
-    (2022101603, 2950, '1st & 10 | 8 yd gain  | Predicted = 🟠, Actual = ✅'), (2022100901, 2020, '1st & 10 | 5 yd gain  | Predicted = 🟢, Actual = ✅'), 
-    (2022102309, 2438, '1st & 10 | 12 yd gain | Predicted = 🟢, Actual = ✅'), (2022103007, 1756, '1st & 10 | 8 yd gain  | Predicted = 🟢, Actual = ✅'),
-    (2022102400, 1163, '3rd & 5  | 20 yd gain | Predicted = 🟠, Actual = ✅'), (2022100900, 3109, '1st & 10 | 0 yd gain  | Predicted = 🟢, Actual = ❌'), 
-    (2021103105, 4042, '2nd & 10 | 2 yd gain  | Predicted = 🟠, Actual = ❌'), (2022091800, 3523, '2nd & 8  | 2 yd gain  | Predicted = 🔴, Actual = ❌'), 
-    (2021091202, 3512, '2nd & 10 | 3 yd gain  | Predicted = 🔴, Actual = ❌'), (2021092610, 3481, '1st & 10 | 3 yd gain  | Predicted = 🟠, Actual = ❌'), 
-    (2021101011, 1501, '2nd & 12 | 1 yd gain  | Predicted = 🟠, Actual = ❌'), (2022100908, 2851, '2nd & 12 | -4 yd gain | Predicted = 🔴, Actual = ❌'), 
-    (2022091901, 1311, '2nd & 10 | -2 yd gain | Predicted = 🔴, Actual = ❌'), (2022102301, 1988, '3rd & 11 | 3 yd gain  | Predicted = 🔴, Actual = ❌'),
-    (2022102304, 1087, '3rd & 10 | 5 yd gain  | Predicted = 🔴, Actual = ❌'), (2021100304, 484,  '2nd & 10 | 1 yd gain  | Predicted = 🟠, Actual = ❌')
+    (2021102404, 108,  '[3rd & 3][2 yd gain]   Predicted = 🔴, Actual = ❌'), (2021091212, 611,  '[2nd & 8][1 yd gain]   Predicted = 🔴, Actual = ❌'), 
+    (2022091112, 917,  '[2nd & 7][22 yd gain]  Predicted = 🟢, Actual = ✅'), (2021100303, 1951, '[3rd & 14][9 yd gain]  Predicted = 🔴, Actual = ❌'), 
+    (2021091912, 3953, '[2nd & 6][5 yd gain]   Predicted = 🟢, Actual = ✅'), (2021091204, 2742, '[1st & 10][11 yd gain] Predicted = 🟢, Actual = ✅'), 
+    (2021100400, 262,  '[1st & 10][7 yd gain]  Predicted = 🟢, Actual = ✅'), (2022103008, 2713, '[4th & 3][9 yd gain]   Predicted = 🔴, Actual = ✅'), 
+    (2022092509, 3717, '[1st & 10][6 yd gain]  Predicted = 🟢, Actual = ✅'), (2022101606, 1414, '[3rd & 4][5 yd gain]   Predicted = 🟢, Actual = ✅'), 
+    (2021110100, 1351, '[1st & 10][7 yd gain]  Predicted = 🟢, Actual = ✅'), (2022091105, 2544, '[3rd & 10][4 yd gain]  Predicted = 🔴, Actual = ❌'), 
+    (2021102405, 1665, '[2nd & 14][14 yd gain] Predicted = 🟠, Actual = ✅'), (2021091206, 1171, '[1st & 10][14 yd gain] Predicted = 🟢, Actual = ✅'),
+    (2022092900, 2204, '[1st & 10][8 yd gain]  Predicted = 🟢, Actual = ✅'), (2022092200, 2589, '[1st & 10][12 yd gain] Predicted = 🟠, Actual = ✅'), 
+    (2021092605, 3769, '[1st & 10][9 yd gain]  Predicted = 🟢, Actual = ✅'), (2021091909, 2392, '[1st & 10][6 yd gain]  Predicted = 🟠, Actual = ✅'), 
+    (2022110609, 3668, '[2nd & 6][6 yd gain]   Predicted = 🟢, Actual = ✅'), (2021091203, 672,  '[1st & 10][9 yd gain]  Predicted = 🟢, Actual = ✅'), 
+    (2022101603, 2950, '[1st & 10][8 yd gain]  Predicted = 🟠, Actual = ✅'), (2022100901, 2020, '[1st & 10][5 yd gain]  Predicted = 🟢, Actual = ✅'), 
+    (2022102309, 2438, '[1st & 10][12 yd gain] Predicted = 🟢, Actual = ✅'), (2022103007, 1756, '[1st & 10][8 yd gain]  Predicted = 🟢, Actual = ✅'),
+    (2022102400, 1163, '[3rd & 5][20 yd gain]  Predicted = 🟠, Actual = ✅'), (2022100900, 3109, '[1st & 10][0 yd gain]  Predicted = 🟢, Actual = ❌'), 
+    (2021103105, 4042, '[2nd & 10][2 yd gain]  Predicted = 🟠, Actual = ❌'), (2022091800, 3523, '[2nd & 8][2 yd gain]   Predicted = 🔴, Actual = ❌'), 
+    (2021091202, 3512, '[2nd & 10][3 yd gain]  Predicted = 🔴, Actual = ❌'), (2021092610, 3481, '[1st & 10][3 yd gain]  Predicted = 🟠, Actual = ❌'), 
+    (2021101011, 1501, '[2nd & 12][1 yd gain]  Predicted = 🟠, Actual = ❌'), (2022100908, 2851, '[2nd & 12][-4 yd gain] Predicted = 🔴, Actual = ❌'), 
+    (2022091901, 1311, '[2nd & 10][-2 yd gain] Predicted = 🔴, Actual = ❌'), (2022102301, 1988, '[3rd & 11][3 yd gain]  Predicted = 🔴, Actual = ❌'),
+    (2022102304, 1087, '[3rd & 10][5 yd gain]  Predicted = 🔴, Actual = ❌'), (2021100304, 484,  '[2nd & 10][1 yd gain]  Predicted = 🟠, Actual = ❌')
 ]
 
 if 'idx' not in st.session_state:
