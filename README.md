@@ -2,9 +2,8 @@
 
 This project uses **NFL player tracking data** to build a **CNN** that predicts, at every moment of a play, **the probability that a short pass to a receiver will succeed in meeting down-and-distance thresholds**, producing a clear “green/yellow/red-light” indicator for analyzing receivers and play design.
 
-Play Visualization         |  Receiver Success Probability Visualization
-:-------------------------:|:-------------------------:
-![](play_gifs/2021091212_611.gif)  |  ![](play_prob_gifs/2021091212_611_probs.gif)
+
+![](play_gifs/2021102404_108.gif)
 
 **Author:** Louis DiMuro
 
