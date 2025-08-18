@@ -4,21 +4,30 @@ from PIL import Image
 from pathlib import Path
 import time
 
-# st.title("CNN-Based NFL 'Short-Pass Success Probability'")
-# st.markdown("<h1 style='text-align: center;'>CNN-Based NFL 'Short-Pass Success Probability'</h1>", unsafe_allow_html=True)
-st.markdown("<h1 style='text-align: center;'>Predicting NFL 'Short Pass Success' with a CNN</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Predicting NFL \"Short Pass Success\" with a CNN</h1>", unsafe_allow_html=True)
 st.set_page_config(layout='wide')
 
 # Remove Streamlit auto-padding
-st.markdown(
-    """
+st.markdown("""
     <style>
+        /* Remove unnecessary padding */
         .stApp { padding:0px !important; }
-        .block-container { padding:2.0rem !important; }
+
+        /* Default: desktop-friendly padding */
+        .block-container {
+            padding-left:20rem !important;
+            padding-right:20rem !important;
+        }
+
+        /* Override for tablets/phones */
+        @media (max-width: 1600px) {
+            .block-container {
+                padding-left:2rem !important;
+                padding-right:2rem !important;
+            }
+        }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
 
 # FUNCTIONS
@@ -106,32 +115,41 @@ def toggle_play():
 
 
 plays = [
-    (2021102404, 108,  '3rd & 3  | Predicted = 🔴, Actual = ❌'), (2021091212, 611,  '2nd & 8  | Predicted = 🔴, Actual = ❌'), 
-    (2022091112, 917,  '2nd & 7  | Predicted = 🟢, Actual = ✅'), (2021100303, 1951, '3rd & 14 | Predicted = 🔴, Actual = ❌'), 
-    # (2021102410, 3434),
-    (2021091912, 3953, '2nd & 6  | Predicted = 🟢, Actual = ✅'), (2021091204, 2742, '1st & 10 | Predicted = 🟢, Actual = ✅'), 
-    (2021100400, 262,  '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022103008, 2713, '4th & 3  | Predicted = 🔴, Actual = ✅'), 
-    (2022092509, 3717, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022101606, 1414, '3rd & 4  | Predicted = 🟢, Actual = ✅'), 
-    (2021110100, 1351, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022091105, 2544, '3rd & 10 | Predicted = 🔴, Actual = ❌'), 
-    (2021102405, 1665, '2nd & 14 | Predicted = 🟠, Actual = ✅'), (2021091206, 1171, '1st & 10 | Predicted = 🟢, Actual = ✅'),
-    (2022092900, 2204, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022092200, 2589, '1st & 10 | Predicted = 🟠, Actual = ✅'), 
-    (2021092605, 3769, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2021091909, 2392, '1st & 10 | Predicted = 🟠, Actual = ✅'), 
-    (2022110609, 3668, '2nd & 6  | Predicted = 🟢, Actual = ✅'), (2021091203, 672,  '1st & 10 | Predicted = 🟢, Actual = ✅'), 
-    (2022101603, 2950, '1st & 10 | Predicted = 🟠, Actual = ✅'), (2022100901, 2020, '1st & 10 | Predicted = 🟢, Actual = ✅'), 
-    (2022102309, 2438, '1st & 10 | Predicted = 🟢, Actual = ✅'), (2022103007, 1756, '1st & 10 | Predicted = 🟢, Actual = ✅'),
-    (2022102400, 1163, '3rd & 5  | Predicted = 🟠, Actual = ✅'), (2022100900, 3109, '1st & 10 | Predicted = 🟢, Actual = ❌'), 
-    (2021103105, 4042, '2nd & 10 | Predicted = 🟠, Actual = ❌'), (2022091800, 3523, '2nd & 8  | Predicted = 🔴, Actual = ❌'), 
-    (2021091202, 3512, '2nd & 10 | Predicted = 🔴, Actual = ❌'), (2021092610, 3481, '1st & 10 | Predicted = 🟠, Actual = ❌'), 
-    (2021101011, 1501, '2nd & 12 | Predicted = 🟠, Actual = ❌'), (2022100908, 2851, '2nd & 12 | Predicted = 🔴, Actual = ❌'), 
-    (2022091901, 1311, '2nd & 10 | Predicted = 🔴, Actual = ❌'), (2022102301, 1988, '3rd & 11 | Predicted = 🔴, Actual = ❌'),
-    (2022102304, 1087, '3rd & 10 | Predicted = 🔴, Actual = ❌'), (2021100304, 484,  '2nd & 10 | Predicted = 🟠, Actual = ❌')
-    #, (2022101605, 2054)
+    (2021102404, 108,  'Play 208  | 3rd & 3  | Predicted = 🔴, Actual = ❌'), (2021091212, 611,  'Play 611  | 2nd & 8  | Predicted = 🔴, Actual = ❌'), 
+    (2022091112, 917,  'Play 917  | 2nd & 7  | Predicted = 🟢, Actual = ✅'), (2021100303, 1951, 'Play 1951 | 3rd & 14 | Predicted = 🔴, Actual = ❌'), 
+    (2021091912, 3953, 'Play 3953 | 2nd & 6  | Predicted = 🟢, Actual = ✅'), (2021091204, 2742, 'Play 2742 | 1st & 10 | Predicted = 🟢, Actual = ✅'), 
+    (2021100400, 262,  'Play 262  | 1st & 10 | Predicted = 🟢, Actual = ✅'), (2022103008, 2713, 'Play 2713 | 4th & 3  | Predicted = 🔴, Actual = ✅'), 
+    (2022092509, 3717, 'Play 3717 | 1st & 10 | Predicted = 🟢, Actual = ✅'), (2022101606, 1414, 'Play 1414 | 3rd & 4  | Predicted = 🟢, Actual = ✅'), 
+    (2021110100, 1351, 'Play 1351 | 1st & 10 | Predicted = 🟢, Actual = ✅'), (2022091105, 2544, 'Play 2544 | 3rd & 10 | Predicted = 🔴, Actual = ❌'), 
+    (2021102405, 1665, 'Play 1665 | 2nd & 14 | Predicted = 🟠, Actual = ✅'), (2021091206, 1171, 'Play 1171 | 1st & 10 | Predicted = 🟢, Actual = ✅'),
+    (2022092900, 2204, 'Play 2204 | 1st & 10 | Predicted = 🟢, Actual = ✅'), (2022092200, 2589, 'Play 2589 | 1st & 10 | Predicted = 🟠, Actual = ✅'), 
+    (2021092605, 3769, 'Play 3769 | 1st & 10 | Predicted = 🟢, Actual = ✅'), (2021091909, 2392, 'Play 2392 | 1st & 10 | Predicted = 🟠, Actual = ✅'), 
+    (2022110609, 3668, 'Play 3668 | 2nd & 6  | Predicted = 🟢, Actual = ✅'), (2021091203, 672,  'Play 672  | 1st & 10 | Predicted = 🟢, Actual = ✅'), 
+    (2022101603, 2950, 'Play 2950 | 1st & 10 | Predicted = 🟠, Actual = ✅'), (2022100901, 2020, 'Play 2020 | 1st & 10 | Predicted = 🟢, Actual = ✅'), 
+    (2022102309, 2438, 'Play 2438 | 1st & 10 | Predicted = 🟢, Actual = ✅'), (2022103007, 1756, 'Play 1756 | 1st & 10 | Predicted = 🟢, Actual = ✅'),
+    (2022102400, 1163, 'Play 1163 | 3rd & 5  | Predicted = 🟠, Actual = ✅'), (2022100900, 3109, 'Play 3109 | 1st & 10 | Predicted = 🟢, Actual = ❌'), 
+    (2021103105, 4042, 'Play 4042 | 2nd & 10 | Predicted = 🟠, Actual = ❌'), (2022091800, 3523, 'Play 3523 | 2nd & 8  | Predicted = 🔴, Actual = ❌'), 
+    (2021091202, 3512, 'Play 3512 | 2nd & 10 | Predicted = 🔴, Actual = ❌'), (2021092610, 3481, 'Play 3481 | 1st & 10 | Predicted = 🟠, Actual = ❌'), 
+    (2021101011, 1501, 'Play 1501 | 2nd & 12 | Predicted = 🟠, Actual = ❌'), (2022100908, 2851, 'Play 2851 | 2nd & 12 | Predicted = 🔴, Actual = ❌'), 
+    (2022091901, 1311, 'Play 1311 | 2nd & 10 | Predicted = 🔴, Actual = ❌'), (2022102301, 1988, 'Play 1988 | 3rd & 11 | Predicted = 🔴, Actual = ❌'),
+    (2022102304, 1087, 'Play 1087 | 3rd & 10 | Predicted = 🔴, Actual = ❌'), (2021100304, 484,  'Play 484  | 2nd & 10 | Predicted = 🟠, Actual = ❌')
 ]
+
+# plays = {
+#     (2021102404, 108):  'Play 108  | 3rd & 3  | Predicted = 🔴, Actual = ❌',
+#     (2021091212, 611):  'Play 611  | 2nd & 8  | Predicted = 🔴, Actual = ❌',
+#     (2022091112, 917):  'Play 917  | 2nd & 7  | Predicted = 🟢, Actual = ✅',
+#     (2021100303, 1951): 'Play 1951 | 3rd & 14 | Predicted = 🔴, Actual = ❌',
+#     (2021091912, 3953): 'Play 3953 | 2nd & 6  | Predicted = 🟢, Actual = ✅',
+#     (2021091204, 2742): 'Play 2742 | 1st & 10 | Predicted = 🟢, Actual = ✅',
+#     (2021100400, 262):  'Play 262  | 1st & 10 | Predicted = 🟢, Actual = ✅',
+
+# }
 
 if 'idx' not in st.session_state:
     st.session_state.idx = 0
 
-if 'is_playing' not in st.session_state:
+if "is_playing" not in st.session_state:
     st.session_state.is_playing = False
 
 if 'last_play' not in st.session_state:
@@ -144,10 +162,10 @@ if 'last_play' not in st.session_state:
 # Project Decription/Context
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    with st.expander("🏈 Project Details (click to expand)"):
+    with st.expander("🏈 PROJECT DETAILS (click to expand)"):
         st.markdown(
             """
-            **"SHORT-PASS SUCCESS PROBABILITY" (SPSP)**
+            **"SHORT PASS SUCCESS PROBABILITY" (SPSP)** 
             - **Training Data**: NFL player-tracking (2021-2022) - 3,269 short-pass plays (≤2 yds from the line of scrimmage) at the moment the QB throws
             - **Goal**: Predict (before the ball is released) the probability that the play will meet the **"success"** thresholds:
                 - **40+%** yards-to-go gained on **1st-down**
@@ -157,14 +175,16 @@ with col2:
                 - 🟢 = **<span style='color:green'>70+%</span>** SPSP (high)
                 - 🟠 = **<span style='color:orange'>40-69%</span>** SPSP (medium)
                 - 🔴 = **<span style='color:red'>< 40%</span>** SPSP (low)
+
+            **<a href='https://medium.com/@lou.j.dimuro/predicting-nfl-short-pass-success-with-a-cnn-2f279c985769'>READ FULL PAPER</a>**
             """,unsafe_allow_html=True,
         )
     
 
 # Play Selection View
-col1, col2, col3 = st.columns([1, 1, 1])
+col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    selected_play = st.selectbox('Choose a play:', plays)
+    selected_play = st.selectbox('Choose a play:', plays, format_func=lambda x: x[2])
 
 game_id, play_id, _ = selected_play
 
@@ -184,9 +204,12 @@ if selected_play != st.session_state.last_play:
             del st.session_state[key]
     st.session_state.last_play = selected_play
 
+    # Auto-play the selected play
+    st.session_state.is_playing = True
 
-frame_folder = f'play_frames/{game_id}_{play_id}_behind_los_norm_centered'
-prob_folder   = f'play_prob_frames/{game_id}_{play_id}_behind_los_norm_centered_probs'
+
+frame_folder = f'play_frames/{game_id}_{play_id}'
+prob_folder   = f'play_prob_frames/{game_id}_{play_id}_probs'
 
 # These calls are cached, hit the disk only once per folder
 frame_paths = list_png_paths(frame_folder)
@@ -204,7 +227,6 @@ if 'prob_frames' not in st.session_state:
 # Short aliases – now they are bytes, not file‑paths
 frames = st.session_state['frames']
 prob_frames = st.session_state['prob_frames']
-
 
 
 main_col1, main_col2 = st.columns([1, 1])#st.columns([1.5, 1])
