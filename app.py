@@ -1,6 +1,4 @@
 import streamlit as st
-import os
-from PIL import Image
 from pathlib import Path
 import time
 
@@ -13,7 +11,7 @@ st.markdown("""
         /* Remove unnecessary padding */
         .stApp { padding:0px !important; }
 
-        /* Default: desktop-friendly padding */
+        /* Default desktop-friendly padding */
         .block-container {
             padding-left:13rem !important;
             padding-right:13rem !important;
@@ -103,7 +101,7 @@ with col2:
             """
             **"SHORT PASS SUCCESS PROBABILITY" (SPSP)** 
             - **Training Data**: NFL player tracking data (from 2021-2022) - 3,229 short-pass plays (≤2 yds from the line of scrimmage) at the moment the QB throws
-            - **Goal**: Predict (before the ball is thrown) the probability that the play will be a **"success"**, defined by:
+            - **Goal**: Predict (before the ball is thrown) the probability that the play will be a **"success,"** defined by:
                 - **40+%** yards-to-go gained on **1st-down**
                 - **60+%** yards-to-go gained on **2nd-down**
                 - **100%** yards-to-go gained on **3rd/4th-down**
