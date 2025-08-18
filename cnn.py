@@ -183,7 +183,7 @@ def train_cnn(x, y, num_epochs=47):
     plt.plot(spsp_pred, spsp_true, marker='o'); plt.plot([0,1],[0,1],'--')
     plt.title('Calibration')
     plt.tight_layout(); 
-    plt.savefig('training_curves.png'); 
+    plt.savefig('plots/training_curves.png'); 
     plt.close()
 
     model.load_state_dict(early_stop.best_state)
