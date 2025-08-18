@@ -17,10 +17,11 @@ st.markdown("""
         .block-container {
             padding-left:20rem !important;
             padding-right:20rem !important;
+            padding-top:2rem !important;
         }
 
         /* Override for tablets/phones */
-        @media (max-width: 1600px) {
+        @media (max-width: 1200px) {
             .block-container {
                 padding-left:2rem !important;
                 padding-right:2rem !important;
