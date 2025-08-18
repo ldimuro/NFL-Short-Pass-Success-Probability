@@ -102,12 +102,12 @@ with col2:
         st.markdown(
             """
             **"SHORT PASS SUCCESS PROBABILITY" (SPSP)** 
-            - **Training Data**: NFL player-tracking (2021-2022) - 3,269 short-pass plays (≤2 yds from the line of scrimmage) at the moment the QB throws
-            - **Goal**: Predict (before the ball is released) the probability that the play will meet the **"success"** thresholds:
+            - **Training Data**: NFL player tracking data (from 2021-2022) - 3,229 short-pass plays (≤2 yds from the line of scrimmage) at the moment the QB throws
+            - **Goal**: Predict (before the ball is thrown) the probability that the play will be a **"success"**, defined by:
                 - **40+%** yards-to-go gained on **1st-down**
                 - **60+%** yards-to-go gained on **2nd-down**
                 - **100%** yards-to-go gained on **3rd/4th-down**
-            - **Output**: **SPSP** (Short-Pass Success Probability), indicated by a coloured circle around the intended receiver:
+            - **Output**: **SPSP** (Short Pass Success Probability), indicated by a coloured circle around the intended receiver:
                 - 🟢 = **<span style='color:green'>70+%</span>** SPSP (high)
                 - 🟠 = **<span style='color:orange'>40-69%</span>** SPSP (medium)
                 - 🔴 = **<span style='color:red'>< 40%</span>** SPSP (low)
