@@ -78,6 +78,6 @@ Play Visualization         |  Receiver Success Probability Visualization
 
 ---
 ## Applications/Use Cases
-- **Receiver openness**: calculate the average SPSP for every play a receiver runs a short route, can answer the question “how often is this receiver getting open around the line of scrimmage?” The standard deviation of these SPSPs can also be used to determine how “consistent” a receiver gets open
-- **Defensive formation vulnerability**: collect all SPSPs against a specific opponent and calculate the average SPSP for each defensive formation (e.g., Cover-3, 4-man front, etc.) to reveal which defensive formations and alignments are most susceptible to short passes
-- **“Clutchness”**: count the number of times the SPSP predicted no success for a receiver’s play but the play ended up as a success, could potentially quantify the receiver’s ability to “turn nothing into something”
+- **Receiver openness**: by averaging SPSP values across all short routes a receiver runs, coaches can answer the question “how often is this receiver getting open around the line of scrimmage?” The standard deviation of these SPSPs can also be used to determine how “consistent” a receiver gets open
+- **Defensive formation vulnerability**: aggregating all SPSPs against a specific opponent and calculating the average SPSP for each defensive formation (e.g., Cover-3, 4-man front, etc.) can reveal which defensive formations and alignments are most susceptible to short passes
+- **“Clutchness”**: for a certain receiver, tracking the number of plays the SPSP predicted no success but the receiver still converted could potentially quantify the receiver’s ability to “turn nothing into something” through tackle-breaking, YAC ability, or playmaking instincts
