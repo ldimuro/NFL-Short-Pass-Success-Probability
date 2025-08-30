@@ -57,7 +57,9 @@ The CNN performance was measured against a Logistic Regression model (using the 
 | Brier Score      | **0.2026**    | 0.2378   | 0.2419 (all preds=0.59)     |
 | Overall Accuracy | **0.6808**    | 0.6030   | 0.5941                      |
 
-![Confidences](plots/confidences.png)
+<img src="plots/confidences.png" alt="Calibration" style="width:80%;"/>
+
+<img src="plots/cnn_calibration_pooled.png" alt="Calibration" style="width:60%;"/>
 
 ---
 
